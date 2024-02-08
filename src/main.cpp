@@ -38,7 +38,7 @@ const char *SCORE_MESSAGE = "Never gonna give you up!";
 #define TEAM_SelTime 5000         // Time when turning on to select teams
 #define Down_Time 5000            // Time it takes to regen when you've been shot
 #define VEST_CONNECTTIME 7000     // time to connact a vest
-#define SHOOT_DELAY 400           // Firerate
+#define SHOOT_DELAY 200           // Firerate
 #define TIME_BEFORE_RELOAD 2000   // Time you have to hold the shoot button down before starting to reload
 #define SEND_POINT_INTERVAL 10000 // The between sending people who killed you to score a point. Don't set too low, since it's pretty time intensive.
 
@@ -46,10 +46,11 @@ const char *SCORE_MESSAGE = "Never gonna give you up!";
 #define MESH_PASSWORD "PWA_Lasertag"
 #define MESH_PORT 5555
 
-#define MAX_BULLETS 8
-// #define SPACE_FOR_BULLETS 120 // the y-space to draw bullets to.
-// const uint8_t BULLET_HEIGHT = min(SPACE_FOR_BULLETS / MAX_BULLETS, 8);  // set the bullet size so they fit on screen, max 8 pixels, because bigger looks stupid.
-
+#define MAX_BULLETS 30
+#define BULLET_WIDTH 12
+#define SPACE_FOR_BULLETS 80 // the y-space to draw bullets to.
+// const uint8_t BULLET_HEIGHT = max(1,((min(SPACE_FOR_BULLETS / MAX_BULLETS, 7) + 1) >> 1 << 1) -1);  // set the bullet size so they fit on screen, max 7 pixels, because bigger looks stupid. Some magic to make it odd so the circle will fit. Minimum is 1 so there's no overflow.
+const uint8_t BULLET_HEIGHT = 5;
 IRrecv receiver(IR_RECEIVER);
 decode_results results;
 
@@ -65,7 +66,7 @@ painlessMesh Lasermesh;
 U8G2_SH1106_128X64_NONAME_F_HW_I2C Display(U8G2_R3);
 Adafruit_NeoPixel pixels(LED_NUM, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
-void drawammunition(uint8_t y);
+void drawammunition(uint8_t x,uint8_t y);
 void drawbullets(uint8_t first = 0, uint8_t last = MAX_BULLETS);
 
 void ammonition_led();
@@ -197,12 +198,43 @@ void loop()
 }
 
 // put function definitions here:
-void drawammunition(uint8_t y)
+void drawammunition(uint8_t x,uint8_t y)
 {
-  Display.drawBox(0, y, 15, 7);
-  Display.drawFilledEllipse(15, y + 3, 4, 3, U8G2_DRAW_ALL); // y + Floored half of the height of the box
+  Display.drawBox(x, y, BULLET_WIDTH, BULLET_HEIGHT);
+  // Display.drawFilledEllipse(BULLET_WIDTH /* +x */, y + ((int)BULLET_HEIGHT / 2), 4, ((int)BULLET_HEIGHT / 2), U8G2_DRAW_ALL); // y + Floored half of the height of the box
+  Display.drawDisc(BULLET_WIDTH + x ,y + BULLET_HEIGHT / 2, BULLET_HEIGHT / 2, U8G2_DRAW_LOWER_RIGHT | U8G2_DRAW_UPPER_RIGHT);
 }
 
+void drawbullets(uint8_t first, uint8_t last)
+{
+  Display.clearBuffer();
+  printTeamInformation();
+  // uint16_t bullets_left = last;
+  // for (int i = first; i < last; i++, bullets_left--)
+  // {
+  //   uint8_t y = SPACE_FOR_BULLETS - i * (BULLET_HEIGHT  +1);
+  //   drawammunition(0,y); // leave blank space between bullets.
+  //   if(y <= Display.getHeight() - SPACE_FOR_BULLETS){
+  //     break;
+  //   }
+  // }
+  uint8_t x = 0; 
+  uint8_t y = Display.getHeight() - BULLET_HEIGHT;
+
+  for(uint8_t i = first; i<last;i++)
+  {
+    drawammunition(x,y);
+    if(y >= (Display.getHeight()-SPACE_FOR_BULLETS)){
+      y = y - (BULLET_HEIGHT + 1);
+    }else {
+      x = x + (BULLET_WIDTH +4); // leave some space between the collumns
+      y = Display.getHeight() - BULLET_HEIGHT;
+    }
+    // y = (y >= (128 - SPACE_FOR_BULLETS)) ? y - (BULLET_HEIGHT + 1) : (x += BULLET_WIDTH + 4, 128 - BULLET_HEIGHT);
+  }
+
+  Display.sendBuffer();
+}
 // void fillAmmo(uint8_t amount)
 // {
 //   // for (uint8_t i = 119; i > 119 - amount * 9; i -= 9)
@@ -232,7 +264,7 @@ void TaskAmmoCallback()
     int i = bullet_offset - (TaskReload.getRunCounter() * 9);
     bullets++;
     updatePixels();
-    drawammunition(i);
+    drawammunition(0,i);
 // strip.SetPixelColor(0,RgbColor(255,255,255));
 // strip.Show();
 #ifdef DEBUG_MODE
@@ -374,16 +406,6 @@ void IRAM_ATTR onShoot() // Send a Milestag2 Package, Play sounds and start the 
   }
 }
 
-void drawbullets(uint8_t first, uint8_t last)
-{
-  Display.clearBuffer();
-  printTeamInformation();
-  for (int i = first; i < last; i++)
-  {
-    drawammunition(119 - i * 9);
-  }
-  Display.sendBuffer();
-}
 
 void sendMilesTag(uint8_t playerIndex, uint8_t team, uint8_t dammage)
 {
