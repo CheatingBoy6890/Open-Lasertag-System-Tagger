@@ -46,11 +46,11 @@ const char *SCORE_MESSAGE = "Never gonna give you up!";
 #define MESH_PASSWORD "PWA_Lasertag"
 #define MESH_PORT 5555
 
-#define MAX_BULLETS 30
+#define MAX_BULLETS 20
 #define BULLET_WIDTH 12
-#define SPACE_FOR_BULLETS 80 // the y-space to draw bullets to.
+#define SPACE_FOR_BULLETS 85 // the y-space to draw bullets to.
 // const uint8_t BULLET_HEIGHT = max(1,((min(SPACE_FOR_BULLETS / MAX_BULLETS, 7) + 1) >> 1 << 1) -1);  // set the bullet size so they fit on screen, max 7 pixels, because bigger looks stupid. Some magic to make it odd so the circle will fit. Minimum is 1 so there's no overflow.
-const uint8_t BULLET_HEIGHT = 5;
+const uint8_t BULLET_HEIGHT = 7; // must be odd
 IRrecv receiver(IR_RECEIVER);
 decode_results results;
 
@@ -66,7 +66,7 @@ painlessMesh Lasermesh;
 U8G2_SH1106_128X64_NONAME_F_HW_I2C Display(U8G2_R3);
 Adafruit_NeoPixel pixels(LED_NUM, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
-void drawammunition(uint8_t x,uint8_t y);
+void drawammunition(uint8_t x, uint8_t y);
 void drawbullets(uint8_t first = 0, uint8_t last = MAX_BULLETS);
 
 void ammonition_led();
@@ -198,11 +198,11 @@ void loop()
 }
 
 // put function definitions here:
-void drawammunition(uint8_t x,uint8_t y)
+void drawammunition(uint8_t x, uint8_t y)
 {
   Display.drawBox(x, y, BULLET_WIDTH, BULLET_HEIGHT);
   // Display.drawFilledEllipse(BULLET_WIDTH /* +x */, y + ((int)BULLET_HEIGHT / 2), 4, ((int)BULLET_HEIGHT / 2), U8G2_DRAW_ALL); // y + Floored half of the height of the box
-  Display.drawDisc(BULLET_WIDTH + x ,y + BULLET_HEIGHT / 2, BULLET_HEIGHT / 2, U8G2_DRAW_LOWER_RIGHT | U8G2_DRAW_UPPER_RIGHT);
+  Display.drawDisc(BULLET_WIDTH + x, y + BULLET_HEIGHT / 2, BULLET_HEIGHT / 2, U8G2_DRAW_LOWER_RIGHT | U8G2_DRAW_UPPER_RIGHT);
 }
 
 void drawbullets(uint8_t first, uint8_t last)
@@ -218,16 +218,19 @@ void drawbullets(uint8_t first, uint8_t last)
   //     break;
   //   }
   // }
-  uint8_t x = 0; 
+  uint8_t x = 0;
   uint8_t y = Display.getHeight() - BULLET_HEIGHT;
 
-  for(uint8_t i = first; i<last;i++)
+  for (uint8_t i = first; i < last; i++)
   {
-    drawammunition(x,y);
-    if(y >= (Display.getHeight()-SPACE_FOR_BULLETS)){
+    drawammunition(x, y);
+    if (y >= (Display.getHeight() - SPACE_FOR_BULLETS))
+    {
       y = y - (BULLET_HEIGHT + 1);
-    }else {
-      x = x + (BULLET_WIDTH +4); // leave some space between the collumns
+    }
+    else
+    {
+      x = x + (BULLET_WIDTH + 4); // leave some space between the collumns
       y = Display.getHeight() - BULLET_HEIGHT;
     }
     // y = (y >= (128 - SPACE_FOR_BULLETS)) ? y - (BULLET_HEIGHT + 1) : (x += BULLET_WIDTH + 4, 128 - BULLET_HEIGHT);
@@ -264,7 +267,7 @@ void TaskAmmoCallback()
     int i = bullet_offset - (TaskReload.getRunCounter() * 9);
     bullets++;
     updatePixels();
-    drawammunition(0,i);
+    drawammunition(0, i);
 // strip.SetPixelColor(0,RgbColor(255,255,255));
 // strip.Show();
 #ifdef DEBUG_MODE
@@ -405,7 +408,6 @@ void IRAM_ATTR onShoot() // Send a Milestag2 Package, Play sounds and start the 
     }
   }
 }
-
 
 void sendMilesTag(uint8_t playerIndex, uint8_t team, uint8_t dammage)
 {
