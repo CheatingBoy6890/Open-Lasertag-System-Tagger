@@ -18,6 +18,7 @@
 
 #include "neopixel_config.h"
 #include "team_config.h"
+#include "Cast_icon.h"
 
 #define DEBUG_MODE
 
@@ -35,20 +36,23 @@ const uint8_t IR_RECEIVER = D5;
 
 const char *SCORE_MESSAGE = "Never gonna give you up!";
 
-#define TEAM_SelTime 5000         // Time when turning on to select teams
-#define Down_Time 5000            // Time it takes to regen when you've been shot
-#define VEST_CONNECTTIME 7000     // time to connact a vest
-#define SHOOT_DELAY 200           // Firerate
-#define TIME_BEFORE_RELOAD 2000   // Time you have to hold the shoot button down before starting to reload
-#define SEND_POINT_INTERVAL 10000 // The between sending people who killed you to score a point. Don't set too low, since it's pretty time intensive.
+#define TEAM_SelTime 5000     // Time when turning on to select teams
+#define VEST_CONNECTTIME 7000 // time to connect a vest
 
-#define MESH_SSID "Lasertag"
-#define MESH_PASSWORD "PWA_Lasertag"
-#define MESH_PORT 5555
+#define Down_Time 5000          // Time it takes to regen when you've been shot
+#define SHOOT_DELAY 200         // Firerate
+#define TIME_BEFORE_RELOAD 2000 // Time you have to hold the shoot button down before starting to reload
+#define RELOAD_INTERVAL 900
+#define SEND_POINT_INTERVAL 5000 // The between sending people who killed you to score a point. Don't set too low, since it's pretty time intensive.
 
-#define MAX_BULLETS 20
+#define SHOOT_DAMMAGE 14
+
+#define IR_CHECK_INTERVAL 300
+
+#define MAX_BULLETS 8 // With BULLET_WIDTH 10 and space 30 x 90 and Bullet_WIDTH 10 theres Space for 48 bullets
 #define BULLET_WIDTH 12
-#define SPACE_FOR_BULLETS 85 // the y-space to draw bullets to.
+#define SPACE_FOR_BULLETS_Y 90 // the y-space  from the bottom (128)of the Display. to  * bullets to.
+#define SPACE_FOR_BULLETS_X 30 // The space for bullets in x direction counted from the left (0) of the Display.
 // const uint8_t BULLET_HEIGHT = max(1,((min(SPACE_FOR_BULLETS / MAX_BULLETS, 7) + 1) >> 1 << 1) -1);  // set the bullet size so they fit on screen, max 7 pixels, because bigger looks stupid. Some magic to make it odd so the circle will fit. Minimum is 1 so there's no overflow.
 const uint8_t BULLET_HEIGHT = 7; // must be odd
 IRrecv receiver(IR_RECEIVER);
@@ -63,7 +67,7 @@ AudioOutputI2SNoDAC *out;
 Scheduler userScheduler;
 painlessMesh Lasermesh;
 
-U8G2_SH1106_128X64_NONAME_F_HW_I2C Display(U8G2_R3);
+U8G2_SH1106_128X64_NONAME_F_HW_I2C Display(U8G2_R1);
 Adafruit_NeoPixel pixels(LED_NUM, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
 void drawammunition(uint8_t x, uint8_t y);
@@ -80,13 +84,18 @@ void loopAudio();
 
 void printTeamInformation();
 void teamselect();
+void draw_connected_icon();
+void drawHP(void);
+void drawScore(void);
 
 void IRRecv();
 
 void onShoot();
 void sendMilesTag(uint8_t player, uint8_t team, uint8_t dammage);
-void CheckIRresults(decode_type_t decode_type, uint8_t teamId, uint16_t playerIndex);
+void CheckIRresults(decode_type_t decode_type, uint8_t teamId, uint16_t playerIndex, uint8_t damage);
 void IRAM_ATTR onLaserButtonChange();
+
+void Connect_Vest();
 
 void MeshReceivedCallback(uint32_t from, String &msg);
 void MeshNewConnectionCallback(uint32_t nodeId);
@@ -96,17 +105,19 @@ void nodeTimeAdjustedCallback(int32_t offset);
 void send_who_killed_me();
 
 // Task DisplayStuff(TASK_SECOND * 5, TASK_FOREVER, &display);
-// Task audioLoop(TASK_MILLISECOND, TASK_FOREVER, &loopAudio);
-Task TaskReload(700, MAX_BULLETS, &TaskAmmoCallback);
+Task TaskLoopAudio(TASK_MILLISECOND * 20, TASK_FOREVER, &loopAudio);
+Task TaskReload(RELOAD_INTERVAL, MAX_BULLETS, &TaskAmmoCallback);
 Task TaskRegenerate(Down_Time, 1, &TaskRegenerateCallback); // Specifying with Down_Time isn't really needed because it schouldn't have an impact. But better to be safe, right?
 Task TaskSendScorePoints(SEND_POINT_INTERVAL, TASK_FOREVER, &send_who_killed_me);
-Task TaskCheckIR(150, TASK_FOREVER, &IRRecv);
+Task TaskCheckIR(IR_CHECK_INTERVAL, TASK_FOREVER, &IRRecv);
 
 uint8_t bullets = MAX_BULLETS;
-uint8_t bullet_offset = 119; // The y-Offset where to draw bullets. // Start value will be overwritten ,just to avoid Null-errors.
 
 uint64_t debounce_shoot;
 
+uint32_t boundvest = 0; // set to 0 to enable vest selection before game start.
+
+uint8_t hp = 100;
 bool alive = true;
 bool isRunning = false;
 bool enableAimLaser = true; // Todo: Maybe it's possible to debuff the other team so they cant use their lasers. Just a thought.
@@ -116,16 +127,23 @@ void setup()
   Serial.begin(115200);
   pinMode(SDA, OUTPUT);
   pinMode(SCL, OUTPUT);
-  pinMode(IR_LASER, OUTPUT);
+  // pinMode(IR_LASER, OUTPUT);
   pinMode(AIM_LASER, OUTPUT);
   pinMode(SHOOT_BUTTON, INPUT_PULLUP); // ESP8266 is buggy, so sometimes the Pin is only pulled up when the pinMode ist INPUT without pullup specified.
   pinMode(AIM_BUTTON, INPUT_PULLUP);   // ESP8266 is buggy, so sometimes the Pin is only pulled up when the pinMode ist INPUT without pullup specified.
   // pinMode(IR_RECEIVER,INPUT);
   pinMode(PIXEL_PIN, OUTPUT);
 
-  receiver.enableIRIn(); // sets the Pin to INPUT automatically
+  //  digitalWrite(IR_LASER,LOW);
+  //  delay(10000);
+
+  // digitalWrite(IR_LASER,HIGH);
+  // delay(10000);
+
   Display.begin();
   Display.setFont(u8g2_font_tinytim_tf);
+  Display.setDrawColor(1);
+  Display.setBitmapMode(1);
   SPIFFS.begin();
   pixels.begin();
   // pixels.SetPixelColor(0,RgbColor(20,100,255));
@@ -151,6 +169,8 @@ void setup()
   Lasermesh.onChangedConnections(&MeshChangedConnectionCallback);
   Lasermesh.onNodeTimeAdjusted(&nodeTimeAdjustedCallback);
 
+  Serial.printf("NodeId = %u", Lasermesh.getNodeId());
+
 #ifdef DEBUG_MODE
   Serial.println(Lasermesh.getNodeId());
 #endif
@@ -158,28 +178,56 @@ void setup()
   userScheduler.addTask(TaskRegenerate);
   userScheduler.addTask(TaskSendScorePoints);
   userScheduler.addTask(TaskCheckIR);
-  TaskCheckIR.enable();
+  userScheduler.addTask(TaskLoopAudio);
   // TaskSendScorePoints.enable();
 
   teamselect();
   pinMode(AIM_BUTTON, INPUT_PULLUP); // Set pinmode again because ESP8266audio blocks these for I2s which isn't needed. With redeclaration there's no problem.
   pinMode(AIM_LASER, OUTPUT);
+  // pinMode(IR_LASER,OUTPUT);
+
+  // for(int i = 0; i < 20; i++)
+  // {
+  //   digitalWrite(IR_LASER,HIGH);
+  //   delay(1000);
+  //   digitalWrite(IR_LASER,LOW);
+  //   delay(1000);
+  // }
+  // transmitter.enableIROut(36, 50);
+  receiver.enableIRIn(true); // sets the Pin to INPUT automatically
+  transmitter.begin();
+  TaskCheckIR.enable();
+
+  Serial.println("Now connecting vest");
+  Connect_Vest();
+  Serial.println("finished Vest connection");
 
   attachInterrupt(digitalPinToInterrupt(AIM_BUTTON), onLaserButtonChange, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(SHOOT_BUTTON), onShoot, CHANGE);
-  drawbullets(0, bullets);
 
-  alive = true;
+  attachInterrupt(digitalPinToInterrupt(SHOOT_BUTTON), onShoot, CHANGE);
+
+  drawbullets(0, bullets);
+  // drawHP();
+  // drawScore();
+  // Display.sendBuffer();
+
+  // alive = true;
+  TaskRegenerate.enable();
   updatePixels();
+  playAudio("/death.mp3");
+  TaskLoopAudio.enable();
 }
 
 void loop()
 {
   // digitalWrite(AIM_LASER,digitalRead(AIM_BUTTON));
-  loopAudio();
+  // loopAudio();
   // Serial.printf("D4 is %i\n", digitalRead(D4));
-  // userScheduler.execute();
-  Lasermesh.update();
+
+  userScheduler.execute();
+
+  // Lasermesh.update();
+
   // delay(1000);
   // if (millis() >= nextTime)
   // {
@@ -205,10 +253,18 @@ void drawammunition(uint8_t x, uint8_t y)
   Display.drawDisc(BULLET_WIDTH + x, y + BULLET_HEIGHT / 2, BULLET_HEIGHT / 2, U8G2_DRAW_LOWER_RIGHT | U8G2_DRAW_UPPER_RIGHT);
 }
 
+// Actually draws everything like team info and hp
 void drawbullets(uint8_t first, uint8_t last)
 {
   Display.clearBuffer();
   printTeamInformation();
+
+  drawScore();
+
+  if (boundvest != 0 && Lasermesh.isConnected(boundvest))
+  {
+    draw_connected_icon();
+  }
   // uint16_t bullets_left = last;
   // for (int i = first; i < last; i++, bullets_left--)
   // {
@@ -224,18 +280,24 @@ void drawbullets(uint8_t first, uint8_t last)
   for (uint8_t i = first; i < last; i++)
   {
     drawammunition(x, y);
-    if (y >= (Display.getHeight() - SPACE_FOR_BULLETS))
+    if (y >= (Display.getHeight() - SPACE_FOR_BULLETS_Y))
     {
       y = y - (BULLET_HEIGHT + 1);
     }
     else
     {
-      x = x + (BULLET_WIDTH + 4); // leave some space between the collumns
-      y = Display.getHeight() - BULLET_HEIGHT;
+      x = x + (BULLET_WIDTH + 4);              // leave some space between the collumns
+      y = Display.getHeight() - BULLET_HEIGHT; // Reset y to bottom of the screen - Height of bullets.
+    }
+
+    if (x > SPACE_FOR_BULLETS_X)
+    {
+      break;
     }
     // y = (y >= (128 - SPACE_FOR_BULLETS)) ? y - (BULLET_HEIGHT + 1) : (x += BULLET_WIDTH + 4, 128 - BULLET_HEIGHT);
   }
 
+  drawHP();
   Display.sendBuffer();
 }
 // void fillAmmo(uint8_t amount)
@@ -259,29 +321,23 @@ void TaskAmmoCallback()
   }
   else
   {
-    if (TaskReload.isFirstIteration())
-    {
-      drawbullets(0, bullets);
-      bullet_offset = 128 - bullets * 9;
-    }
-    int i = bullet_offset - (TaskReload.getRunCounter() * 9);
     bullets++;
+    drawbullets(0, bullets);
+    Display.sendBuffer();
     updatePixels();
-    drawammunition(0, i);
-// strip.SetPixelColor(0,RgbColor(255,255,255));
-// strip.Show();
-#ifdef DEBUG_MODE
-    Serial.printf("reloading cartrige: %i\n", i / 9);
-#endif
+    // strip.SetPixelColor(0,RgbColor(255,255,255));
+    // strip.Show();
     // if(t1.getRunCounter()==2){digitalWrite(BUILTIN_LED,LOW);}
     playAudio("/reload.mp3");
-    Display.sendBuffer();
   }
 }
 
 void TaskRegenerateCallback()
 {
+  hp = 100;
   alive = true;
+  drawHP();
+  Display.sendBuffer();
 }
 
 void playAudio(String path)
@@ -289,20 +345,41 @@ void playAudio(String path)
   if (mp3->isRunning())
   {
     mp3->stop();
-    file->close();
+    // delete mp3;
+    // out->flush();
+    // file->close();
+
+    // out->stop();
+
+    // delete file;
+
+    // delete out;
+
+    // file = new AudioFileSourceSPIFFS(path.c_str());
+    // mp3 = new AudioGeneratorMP3();
+    // out = new AudioOutputI2SNoDAC();
+    // out->SetOutputModeMono(true);
+    // out->SetGain(1);
   }
   file->open(path.c_str());
+  // out->begin();
+
   mp3->begin(file, out);
 }
 
 void loopAudio()
 {
+  if (TaskLoopAudio.getRunCounter() % 100 == 1)
+  {
+    Serial.println("Still looping audio");
+  }
+
   if (mp3->isRunning())
   {
     if (!mp3->loop())
     {
       mp3->stop();
-      file->close();
+      // file->close();
     }
   }
 }
@@ -329,14 +406,33 @@ void printTeamInformation()
   // fillAmmo(10);
 }
 
+void draw_connected_icon()
+{
+  Display.drawXBMP(Display.getWidth() - 15, 0, Cast_icon_width, Cast_icon_height, Cast_icon_bits);
+}
+
 // Needed for painless library
 void MeshReceivedCallback(uint32_t from, String &msg)
 {
   Serial.printf("startHere: Received from %u msg=%s\n", from, msg.c_str());
+  Serial.println(msg);
+
   if (msg = SCORE_MESSAGE)
   {
     myPoints++;
     TeamList[myTeamId].score++; // Todo: sync points between players.
+    drawbullets(0, bullets);
+  }
+
+  if (msg.startsWith("IR-Data:"))
+  {
+    uint64_t value = strtoull(msg.substring(msg.indexOf(":") + 1).c_str(), nullptr, 10);
+    CheckIRresults(MILESTAG2, value & 0x30, value >> 6, value & 0b001111);
+  }
+
+  if (msg == "bound")
+  {
+    boundvest = from;
   }
 }
 
@@ -357,6 +453,7 @@ void MeshChangedConnectionCallback()
     }
     players.shrink_to_fit();
     std::sort(players.begin(), players.end());
+    Serial.printf("Player id is: %u \n", std::distance(players.begin(), std::find(players.begin(), players.end(), Lasermesh.getNodeId())));
   }
 }
 
@@ -375,6 +472,8 @@ void IRAM_ATTR onLaserButtonChange()
 
 void IRAM_ATTR onShoot() // Send a Milestag2 Package, Play sounds and start the ReloadTask for later. Reload task is disabled when the Button is releasded before TIME_BEFORE_RELOAD
 {
+  Serial.println("You pressed shoot!");
+  // noInterrupts();
   if (alive)
   {
 
@@ -384,10 +483,15 @@ void IRAM_ATTR onShoot() // Send a Milestag2 Package, Play sounds and start the 
       if (bullets > 0)
       {
         bullets--;
-        sendMilesTag(std::distance(players.begin(), std::find(players.begin(), players.end(), Lasermesh.getNodeId())), myTeamId, 15);
+        pixels.setPixelColor(LED_SHOOTING, 0xFFFFFF);
+        pixels.show();
+        sendMilesTag(std::distance(players.begin(), std::find(players.begin(), players.end(), Lasermesh.getNodeId())), myTeamId, SHOOT_DAMMAGE);
         playAudio("/shoot.mp3");
         drawbullets(0, bullets);
         updatePixels();
+        delay(10);
+        pixels.setPixelColor(LED_SHOOTING, 0);
+        pixels.show();
       }
       else
       {
@@ -407,17 +511,20 @@ void IRAM_ATTR onShoot() // Send a Milestag2 Package, Play sounds and start the 
 #endif
     }
   }
+
+  // interrupts();
 }
 
 void sendMilesTag(uint8_t playerIndex, uint8_t team, uint8_t dammage)
 {
-  uint64_t data = 0;
+  uint32_t data = 0;
   data = playerIndex;
   data = data << 2;
   data = data + team;
   data = data << 4;
   data = data + dammage;
-  transmitter.sendMilestag2(data);
+  // transmitter.sendMilestag2(data);
+  transmitter.sendMilestag2(data, 14, 0);
 }
 
 void IRRecv()
@@ -443,23 +550,39 @@ void IRRecv()
     Serial.println(results.command & 0xF);
 #endif
 
-    CheckIRresults(results.decode_type, results.command >> 4, results.address);
+    CheckIRresults(results.decode_type, results.command >> 4, results.address, results.command & 0xF);
     receiver.resume(); // Receive the next value
   }
 }
 
-inline void CheckIRresults(decode_type_t decode_type, uint8_t teamId, uint16_t playerIndex)
+inline void CheckIRresults(decode_type_t decode_type, uint8_t teamId, uint16_t playerIndex, uint8_t damage)
 {
+
+  // Serial.println("\nDecode Type:" + String(decode_type));
+
+  //     Serial.print("Team:");
+  //   Serial.println(teamId);
+
+  //   Serial.print("Player:");
+  //   Serial.println(playerIndex);
+
   if (decode_type == MILESTAG2 && teamId != myTeamId)
   {
-    alive = false;
-    playAudio("/death.mp3");
-    TaskRegenerate.restartDelayed(Down_Time);
-    you_killed_me.push_back(players[playerIndex]);
-    if (!TaskSendScorePoints.enable()) // Check if the task wasn't  aleready running
+    Serial.print("Hp: ");
+    hp = max(hp - Damage[damage], 0);
+    Serial.println(hp);
+
+    if (hp <= 0)
     {
-      TaskSendScorePoints.forceNextIteration();
+      playAudio("/death.mp3");
+      TaskRegenerate.restartDelayed(Down_Time);
+      you_killed_me.push_back(players[playerIndex]);
+      if (!TaskSendScorePoints.enable()) // Check if the task wasn't  aleready running
+      {
+        TaskSendScorePoints.forceNextIteration();
+      }
     }
+    drawbullets(0, bullets);
   }
 }
 
@@ -473,11 +596,15 @@ void updatePixels()
 {
   ammonition_led();
 
+  pixels.setPixelColor(LED_VEST_CONNECTED, boundvest != 0 ? 0xFFFFFF : 0);
+
   pixels.show();
 }
 
 void send_who_killed_me()
 {
+
+  Serial.println("Now sending who killed me");
   you_killed_me.shrink_to_fit();
   auto it = you_killed_me.begin();
   while (it != you_killed_me.end())
@@ -537,12 +664,32 @@ void teamselect()
 
 void Connect_Vest()
 {
+  Display.setCursor(0, 20);
+  Display.print("Now connecting vest!");
+  Display.sendBuffer();
   uint64_t connect_time = millis() + VEST_CONNECTTIME;
-  while (connect_time < millis())
+  while (connect_time > millis())
   {
     if (digitalRead(SHOOT_BUTTON) == LOW)
     {
+
+      Serial.println("Sending packet to connect vest");
       sendMilesTag(std::distance(players.begin(), std::find(players.begin(), players.end(), Lasermesh.getNodeId())), myTeamId, 15);
+      delay(100);
     }
+    Lasermesh.update();
   }
+}
+
+void drawHP(void)
+{
+  Display.drawBox(48, Display.getHeight() - hp, 8, hp);
+  // Display.sendBuffer();
+}
+
+void drawScore(void)
+{
+  Display.setCursor(30, 8);
+  Display.printf("You: %i", myPoints);
+  // Display.sendBuffer();
 }

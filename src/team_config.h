@@ -16,6 +16,11 @@ team TeamList[4] = {
     {"Gelb", 0x7F7F00U, 0}, // yellow
 };
 
+//Damage values for Milestag2 protocol from https://wiki.cuvoodoo.info/lib/exe/fetch.php?media=ir-cock-grenade:mt2proto.pdf
+uint8_t Damage[16] = {
+    1,2,4,5,7,10,15,17,20,25,30,35,40,50,75,100
+};
+
 // struct player
 // {
 //     uint32_t NodeIp;

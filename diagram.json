@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "author": "Marx mustermann",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": -4.76, "attrs": {} },
+    {
+      "type": "board-ssd1306",
+      "id": "oled1",
+      "top": 125.43,
+      "left": 170.66,
+      "rotate": 90,
+      "attrs": { "i2cAddress": "0x3c" }
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "esp:GND.1", "oled1:GND", "black", [ "h-28.65", "v86.4", "h163.2", "v-153.6", "h48" ] ],
+    [ "esp:3V3", "oled1:VCC", "green", [ "h-19.05", "v-57.6", "h201.6" ] ],
+    [ "esp:22", "oled1:SCL", "green", [ "h0" ] ],
+    [ "esp:21", "oled1:SDA", "green", [ "h0" ] ]
+  ],
+  "dependencies": {}
+}

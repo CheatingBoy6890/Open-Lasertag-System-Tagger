@@ -8,6 +8,7 @@
 #define LED_ALIVE 1      // LED that shows if you're alive
 #define LED_AMMUNITION 2 // LEDs brightness shows the amount of ammonition
 #define LED_SHOOTING 3   // LED blinks when pressing the shoot-button as an indicator
+#define LED_VEST_CONNECTED 5
 
 const uint32_t alive_color = 0x7F7F7F;   // not full brightness white
 const uint32_t bullet_led_color = 45511; // HSV color from 0= red to 65536 = red
