@@ -40,9 +40,9 @@ const char *SCORE_MESSAGE = "Never gonna give you up!";
 #define VEST_CONNECTTIME 7000 // time to connect a vest
 
 #define Down_Time 5000          // Time it takes to regen when you've been shot
-#define SHOOT_DELAY 200         // Firerate
-#define TIME_BEFORE_RELOAD 2000 // Time you have to hold the shoot button down before starting to reload
-#define RELOAD_INTERVAL 900
+#define SHOOT_DELAY 350         // Firerate
+#define TIME_BEFORE_RELOAD 1500 // Time you have to hold the shoot button down before starting to reload
+#define RELOAD_INTERVAL 700
 #define SEND_POINT_INTERVAL 5000 // The between sending people who killed you to score a point. Don't set too low, since it's pretty time intensive.
 
 #define SHOOT_DAMMAGE 14
@@ -194,9 +194,8 @@ void setup()
   //   delay(1000);
   // }
   // transmitter.enableIROut(36, 50);
-  receiver.enableIRIn(true); // sets the Pin to INPUT automatically
+  receiver.enableIRIn(); // sets the Pin to INPUT automatically
   transmitter.begin();
-  TaskCheckIR.enable();
 
   Serial.println("Now connecting vest");
   Connect_Vest();
@@ -211,11 +210,12 @@ void setup()
   // drawScore();
   // Display.sendBuffer();
 
-  // alive = true;
+  alive = true;
   TaskRegenerate.enable();
+  TaskCheckIR.enable();
   updatePixels();
-  playAudio("/death.mp3");
   TaskLoopAudio.enable();
+  playAudio("/death.mp3");
 }
 
 void loop()
@@ -224,9 +224,9 @@ void loop()
   // loopAudio();
   // Serial.printf("D4 is %i\n", digitalRead(D4));
 
-  userScheduler.execute();
+  // userScheduler.execute();
 
-  // Lasermesh.update();
+  Lasermesh.update();
 
   // delay(1000);
   // if (millis() >= nextTime)
@@ -314,7 +314,7 @@ void drawbullets(uint8_t first, uint8_t last)
 
 void TaskAmmoCallback()
 {
-
+  Serial.println("TaskAmmo");
   if (bullets >= MAX_BULLETS) // If Ammo is already full or higher due to a bug disable.
   {
     TaskReload.disable();
@@ -334,9 +334,11 @@ void TaskAmmoCallback()
 
 void TaskRegenerateCallback()
 {
+  Serial.println("TaskRegenerate");
   hp = 100;
   alive = true;
-  drawHP();
+  bullets = MAX_BULLETS;
+  drawbullets(0, bullets);
   Display.sendBuffer();
 }
 
@@ -473,7 +475,7 @@ void IRAM_ATTR onLaserButtonChange()
 void IRAM_ATTR onShoot() // Send a Milestag2 Package, Play sounds and start the ReloadTask for later. Reload task is disabled when the Button is releasded before TIME_BEFORE_RELOAD
 {
   Serial.println("You pressed shoot!");
-  // noInterrupts();
+  noInterrupts();
   if (alive)
   {
 
@@ -483,15 +485,21 @@ void IRAM_ATTR onShoot() // Send a Milestag2 Package, Play sounds and start the 
       if (bullets > 0)
       {
         bullets--;
-        pixels.setPixelColor(LED_SHOOTING, 0xFFFFFF);
-        pixels.show();
+        // pixels.setPixelColor(LED_SHOOTING, 0xFFFFFF);
+        // pixels.show();
         sendMilesTag(std::distance(players.begin(), std::find(players.begin(), players.end(), Lasermesh.getNodeId())), myTeamId, SHOOT_DAMMAGE);
+
         playAudio("/shoot.mp3");
+
         drawbullets(0, bullets);
-        updatePixels();
-        delay(10);
-        pixels.setPixelColor(LED_SHOOTING, 0);
-        pixels.show();
+
+        // You can't use Neopüixels in interrupts!
+
+        // updatePixels();
+        // delay(10);
+        // ammonition_led();l
+        // pixels.setPixelColor(LED_SHOOTING, 0);
+        // pixels.show();
       }
       else
       {
@@ -506,13 +514,12 @@ void IRAM_ATTR onShoot() // Send a Milestag2 Package, Play sounds and start the 
     else if (TaskReload.getRunCounter() <= 0) // If the task is enabled, but hasn't run yet --> means: Button has been released to early, disable Reload task.
     {
       TaskReload.disable();
-#ifdef DEBUG_MODE
+
       Serial.println("Disabled Reloading because of Button release!");
-#endif
     }
   }
 
-  // interrupts();
+  interrupts();
 }
 
 void sendMilesTag(uint8_t playerIndex, uint8_t team, uint8_t dammage)
@@ -530,7 +537,7 @@ void sendMilesTag(uint8_t playerIndex, uint8_t team, uint8_t dammage)
 void IRRecv()
 {
 
-  // Serial.println("Trying to decode");
+  Serial.println("Trying to decode");
 
   if (receiver.decode(&results))
   {
@@ -566,7 +573,7 @@ inline void CheckIRresults(decode_type_t decode_type, uint8_t teamId, uint16_t p
   //   Serial.print("Player:");
   //   Serial.println(playerIndex);
 
-  if (decode_type == MILESTAG2 && teamId != myTeamId)
+  if (decode_type == MILESTAG2 && teamId != myTeamId && alive)
   {
     Serial.print("Hp: ");
     hp = max(hp - Damage[damage], 0);
@@ -575,6 +582,7 @@ inline void CheckIRresults(decode_type_t decode_type, uint8_t teamId, uint16_t p
     if (hp <= 0)
     {
       playAudio("/death.mp3");
+      alive = false;
       TaskRegenerate.restartDelayed(Down_Time);
       you_killed_me.push_back(players[playerIndex]);
       if (!TaskSendScorePoints.enable()) // Check if the task wasn't  aleready running
