@@ -36,6 +36,7 @@ uint8_t Damage[16] = {
 // };
 
 uint8_t myTeamId = 0;
+uint8_t myPlayerId =0;
 uint32_t myPoints = 0;
 
 std::vector<uint32_t> players;

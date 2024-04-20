@@ -16,9 +16,10 @@
 
 #include <Adafruit_NeoPixel.h>
 
+#include "weapon.h"
 #include "neopixel_config.h"
 #include "team_config.h"
-#include "Cast_icon.h"
+#include "icons.h"
 
 #define DEBUG_MODE
 
@@ -37,24 +38,24 @@ const uint8_t IR_RECEIVER = D5;
 const char *SCORE_MESSAGE = "Never gonna give you up!";
 
 #define TEAM_SelTime 5000     // Time when turning on to select teams
-#define VEST_CONNECTTIME 7000 // time to connect a vest
+#define VEST_CONNECTTIME 3000 // time to connect a vest
 
 #define Down_Time 5000          // Time it takes to regen when you've been shot
-#define SHOOT_DELAY 350         // Firerate
-#define TIME_BEFORE_RELOAD 1500 // Time you have to hold the shoot button down before starting to reload
-#define RELOAD_INTERVAL 700
+#define SHOOT_DELAY 150         // Firerate
+#define TIME_BEFORE_RELOAD 1000 // Time you have to hold the shoot button down before starting to reload
+#define RELOAD_INTERVAL 450
 #define SEND_POINT_INTERVAL 5000 // The between sending people who killed you to score a point. Don't set too low, since it's pretty time intensive.
 
-#define SHOOT_DAMMAGE 14
 
-#define IR_CHECK_INTERVAL 300
+#define IR_CHECK_INTERVAL 100
 
-#define MAX_BULLETS 8 // With BULLET_WIDTH 10 and space 30 x 90 and Bullet_WIDTH 10 theres Space for 48 bullets
-#define BULLET_WIDTH 12
+#define PISTOL_DAMMAGE 9 // The index of the Dammage array in team_config.h
+#define MAX_BULLETS 14 // With BULLET_WIDTH 10 and space 30 x 90 and Bullet_WIDTH 10 theres Space for 48 bullets
+#define BULLET_WIDTH 10
 #define SPACE_FOR_BULLETS_Y 90 // the y-space  from the bottom (128)of the Display. to  * bullets to.
 #define SPACE_FOR_BULLETS_X 30 // The space for bullets in x direction counted from the left (0) of the Display.
 // const uint8_t BULLET_HEIGHT = max(1,((min(SPACE_FOR_BULLETS / MAX_BULLETS, 7) + 1) >> 1 << 1) -1);  // set the bullet size so they fit on screen, max 7 pixels, because bigger looks stupid. Some magic to make it odd so the circle will fit. Minimum is 1 so there's no overflow.
-const uint8_t BULLET_HEIGHT = 7; // must be odd
+const uint8_t BULLET_HEIGHT = 5; // must be odd
 IRrecv receiver(IR_RECEIVER);
 decode_results results;
 
@@ -78,6 +79,7 @@ void updatePixels();
 
 void TaskAmmoCallback();
 void TaskRegenerateCallback();
+void TaskShootCallback();
 
 void playAudio(String path);
 void loopAudio();
@@ -110,6 +112,7 @@ Task TaskReload(RELOAD_INTERVAL, MAX_BULLETS, &TaskAmmoCallback);
 Task TaskRegenerate(Down_Time, 1, &TaskRegenerateCallback); // Specifying with Down_Time isn't really needed because it schouldn't have an impact. But better to be safe, right?
 Task TaskSendScorePoints(SEND_POINT_INTERVAL, TASK_FOREVER, &send_who_killed_me);
 Task TaskCheckIR(IR_CHECK_INTERVAL, TASK_FOREVER, &IRRecv);
+Task TaskShoot(0,TASK_FOREVER,&TaskShootCallback);
 
 uint8_t bullets = MAX_BULLETS;
 
@@ -179,6 +182,7 @@ void setup()
   userScheduler.addTask(TaskSendScorePoints);
   userScheduler.addTask(TaskCheckIR);
   userScheduler.addTask(TaskLoopAudio);
+  userScheduler.addTask(TaskShoot);
   // TaskSendScorePoints.enable();
 
   teamselect();
@@ -456,6 +460,7 @@ void MeshChangedConnectionCallback()
     players.shrink_to_fit();
     std::sort(players.begin(), players.end());
     Serial.printf("Player id is: %u \n", std::distance(players.begin(), std::find(players.begin(), players.end(), Lasermesh.getNodeId())));
+    myPlayerId = std::distance(players.begin(), std::find(players.begin(), players.end(), Lasermesh.getNodeId()));
   }
 }
 
@@ -474,52 +479,9 @@ void IRAM_ATTR onLaserButtonChange()
 
 void IRAM_ATTR onShoot() // Send a Milestag2 Package, Play sounds and start the ReloadTask for later. Reload task is disabled when the Button is releasded before TIME_BEFORE_RELOAD
 {
-  Serial.println("You pressed shoot!");
-  noInterrupts();
-  if (alive)
-  {
-
-    if (millis() >= debounce_shoot && !TaskReload.isEnabled() && !digitalRead(SHOOT_BUTTON))
-    {
-
-      if (bullets > 0)
-      {
-        bullets--;
-        // pixels.setPixelColor(LED_SHOOTING, 0xFFFFFF);
-        // pixels.show();
-        sendMilesTag(std::distance(players.begin(), std::find(players.begin(), players.end(), Lasermesh.getNodeId())), myTeamId, SHOOT_DAMMAGE);
-
-        playAudio("/shoot.mp3");
-
-        drawbullets(0, bullets);
-
-        // You can't use Neopüixels in interrupts!
-
-        // updatePixels();
-        // delay(10);
-        // ammonition_led();l
-        // pixels.setPixelColor(LED_SHOOTING, 0);
-        // pixels.show();
-      }
-      else
-      {
-        playAudio("/empty.mp3");
-        bullets = 0;
-      }
-
-      TaskReload.restartDelayed(TIME_BEFORE_RELOAD);
-
-      debounce_shoot = millis() + SHOOT_DELAY;
-    }
-    else if (TaskReload.getRunCounter() <= 0) // If the task is enabled, but hasn't run yet --> means: Button has been released to early, disable Reload task.
-    {
-      TaskReload.disable();
-
-      Serial.println("Disabled Reloading because of Button release!");
-    }
-  }
-
-  interrupts();
+  if(alive)
+  {TaskShoot.restart();}
+  
 }
 
 void sendMilesTag(uint8_t playerIndex, uint8_t team, uint8_t dammage)
@@ -700,4 +662,47 @@ void drawScore(void)
   Display.setCursor(30, 8);
   Display.printf("You: %i", myPoints);
   // Display.sendBuffer();
+}
+
+void TaskShootCallback(){
+
+    if (millis() >= debounce_shoot && !TaskReload.isEnabled() && !digitalRead(SHOOT_BUTTON))
+    {
+
+      if (bullets > 0)
+      {
+        bullets--;
+        pixels.setPixelColor(LED_SHOOTING, 0xFFFFFF);
+        pixels.show();
+        sendMilesTag(myPlayerId, myTeamId, PISTOL_DAMMAGE);
+        playAudio("/shoot.mp3");
+
+        drawbullets(0, bullets);
+
+        // You can't use Neopüixels in interrupts!
+
+
+        pixels.setPixelColor(LED_SHOOTING, 0);
+        updatePixels();
+      }
+      else
+      {
+        playAudio("/empty.mp3");
+        bullets = 0;
+      }
+
+      TaskReload.restartDelayed(TIME_BEFORE_RELOAD);
+
+      debounce_shoot = millis() + SHOOT_DELAY;
+    }
+    else if (TaskReload.getRunCounter() <= 0) // If the task is enabled, but hasn't run yet --> means: Button has been released to early, disable Reload task.
+    {
+      TaskReload.disable();
+
+      Serial.println("Disabled Reloading because of Button release!");
+    }
+
+  TaskShoot.disable();
+
+
 }
