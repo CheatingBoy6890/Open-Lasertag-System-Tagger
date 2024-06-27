@@ -3,7 +3,9 @@
 #include <U8g2lib.h>
 
 #include "AudioFileSourceSPIFFS.h"
-#include "AudioGeneratorMP3.h"
+// #include "AudioGeneratorMP3.h"
+// #include "AudioGeneratorFLAC.h"
+#include <AudioGeneratorWAV.h>
 #include "AudioOutputI2SNoDAC.h"
 
 #include <IRremoteESP8266.h>
@@ -11,7 +13,7 @@
 #include <IRutils.h>
 #include <IRsend.h>
 
-// #include <TaskScheduler.h>
+// #include <2g13ucheduler.h>
 #include <painlessMesh.h>
 
 #include <Adafruit_NeoPixel.h>
@@ -19,7 +21,6 @@
 #include "weapon.h"
 #include "neopixel_config.h"
 #include "team_config.h"
-#include "icons.h"
 
 #define DEBUG_MODE
 
@@ -37,20 +38,24 @@ const uint8_t IR_RECEIVER = D5;
 
 const char *SCORE_MESSAGE = "Never gonna give you up!";
 
+const char *DEATH_SOUND = "/death.wav";
+const char *RELOAD_SOUND = "/reload.wav";
+const char *EMPTY_SOUND = "/empty.wav";
+const char *SHOOT_SOUND = "/shoot.wav";
+
 #define TEAM_SelTime 5000     // Time when turning on to select teams
-#define VEST_CONNECTTIME 3000 // time to connect a vest
+#define VEST_CONNECTTIME 1000 // time to connect a vest
 
-#define Down_Time 5000          // Time it takes to regen when you've been shot
-#define SHOOT_DELAY 150         // Firerate
-#define TIME_BEFORE_RELOAD 1000 // Time you have to hold the shoot button down before starting to reload
-#define RELOAD_INTERVAL 450
+#define Down_Time 5000 // Time it takes to regen when you've been shot
+// #define SHOOT_DELAY 150         // Firerate
+// #define TIME_BEFORE_RELOAD 1000 // Time you have to hold the shoot button down before starting to reload
+// #define RELOAD_INTERVAL 450
 #define SEND_POINT_INTERVAL 5000 // The between sending people who killed you to score a point. Don't set too low, since it's pretty time intensive.
-
 
 #define IR_CHECK_INTERVAL 100
 
-#define PISTOL_DAMMAGE 9 // The index of the Dammage array in team_config.h
-#define MAX_BULLETS 14 // With BULLET_WIDTH 10 and space 30 x 90 and Bullet_WIDTH 10 theres Space for 48 bullets
+// #define PISTOL_DAMMAGE 9 // The index of the Dammage array in team_config.h
+// #define MAX_BULLETS 14   // With BULLET_WIDTH 10 and space 30 x 90 and Bullet_WIDTH 10 theres Space for 48 bullets
 #define BULLET_WIDTH 10
 #define SPACE_FOR_BULLETS_Y 90 // the y-space  from the bottom (128)of the Display. to  * bullets to.
 #define SPACE_FOR_BULLETS_X 30 // The space for bullets in x direction counted from the left (0) of the Display.
@@ -62,17 +67,19 @@ decode_results results;
 IRsend transmitter(IR_LASER);
 
 AudioFileSourceSPIFFS *file;
-AudioGeneratorMP3 *mp3;
+// AudioGeneratorMP3a *decoder;
+AudioGeneratorWAV *decoder;
 AudioOutputI2SNoDAC *out;
 
 Scheduler userScheduler;
 painlessMesh Lasermesh;
 
-U8G2_SH1106_128X64_NONAME_F_HW_I2C Display(U8G2_R1);
+uint8_t myWeaponIndex = 0;
+
 Adafruit_NeoPixel pixels(LED_NUM, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
 void drawammunition(uint8_t x, uint8_t y);
-void drawbullets(uint8_t first = 0, uint8_t last = MAX_BULLETS);
+void drawbullets(uint8_t first = 0, uint8_t last = weapons[myWeaponIndex].getMaxBullets());
 
 void ammonition_led();
 void updatePixels();
@@ -86,6 +93,7 @@ void loopAudio();
 
 void printTeamInformation();
 void teamselect();
+void weaponSelect();
 void draw_connected_icon();
 void drawHP(void);
 void drawScore(void);
@@ -107,14 +115,14 @@ void nodeTimeAdjustedCallback(int32_t offset);
 void send_who_killed_me();
 
 // Task DisplayStuff(TASK_SECOND * 5, TASK_FOREVER, &display);
-Task TaskLoopAudio(TASK_MILLISECOND * 20, TASK_FOREVER, &loopAudio);
-Task TaskReload(RELOAD_INTERVAL, MAX_BULLETS, &TaskAmmoCallback);
+Task TaskLoopAudio(TASK_MILLISECOND * 10, TASK_FOREVER, &loopAudio);
+Task TaskReload(0, weapons[myWeaponIndex].getMaxBullets(), &TaskAmmoCallback);
 Task TaskRegenerate(Down_Time, 1, &TaskRegenerateCallback); // Specifying with Down_Time isn't really needed because it schouldn't have an impact. But better to be safe, right?
 Task TaskSendScorePoints(SEND_POINT_INTERVAL, TASK_FOREVER, &send_who_killed_me);
 Task TaskCheckIR(IR_CHECK_INTERVAL, TASK_FOREVER, &IRRecv);
-Task TaskShoot(0,TASK_FOREVER,&TaskShootCallback);
+Task TaskShoot(100, TASK_FOREVER, &TaskShootCallback);
 
-uint8_t bullets = MAX_BULLETS;
+uint8_t bullets = weapons[myWeaponIndex].getMaxBullets();
 
 uint64_t debounce_shoot;
 
@@ -124,10 +132,19 @@ uint8_t hp = 100;
 bool alive = true;
 bool isRunning = false;
 bool enableAimLaser = true; // Todo: Maybe it's possible to debuff the other team so they cant use their lasers. Just a thought.
-
+volatile bool shootButtonReleased = false;
+/*
+  ____       _
+ / ___|  ___| |_ _   _ _ __
+ \___ \ / _ \ __| | | | '_ \
+  ___) |  __/ |_| |_| | |_) |
+ |____/ \___|\__|\__,_| .__/
+                      |_|
+*/
 void setup()
 {
   Serial.begin(115200);
+  Serial.println("setup");
   pinMode(SDA, OUTPUT);
   pinMode(SCL, OUTPUT);
   // pinMode(IR_LASER, OUTPUT);
@@ -149,13 +166,21 @@ void setup()
   Display.setBitmapMode(1);
   SPIFFS.begin();
   pixels.begin();
+
+  weaponSelect();
+  // weapons[myWeaponIndex].DrawIcon(Display,20,20);
+  weapons[myWeaponIndex].createShootTask(TaskShoot);
+  weapons[myWeaponIndex].drawIcon(0, 0);
+  Display.sendBuffer();
+  delay(1000);
   // pixels.SetPixelColor(0,RgbColor(20,100,255));
   // pixels.Show();
 
   audioLogger = &Serial;
 
-  file = new AudioFileSourceSPIFFS("/reload.mp3");
-  mp3 = new AudioGeneratorMP3();
+  file = new AudioFileSourceSPIFFS(DEATH_SOUND);
+  decoder = new AudioGeneratorWAV();
+  decoder->SetBufferSize(500);
   out = new AudioOutputI2SNoDAC();
   out->SetOutputModeMono(true);
   out->SetGain(1);
@@ -186,6 +211,11 @@ void setup()
   // TaskSendScorePoints.enable();
 
   teamselect();
+
+  // Weaponselect
+
+  TaskReload.setInterval(weapons[myWeaponIndex].getReloadInterval());
+
   pinMode(AIM_BUTTON, INPUT_PULLUP); // Set pinmode again because ESP8266audio blocks these for I2s which isn't needed. With redeclaration there's no problem.
   pinMode(AIM_LASER, OUTPUT);
   // pinMode(IR_LASER,OUTPUT);
@@ -207,7 +237,7 @@ void setup()
 
   attachInterrupt(digitalPinToInterrupt(AIM_BUTTON), onLaserButtonChange, CHANGE);
 
-  attachInterrupt(digitalPinToInterrupt(SHOOT_BUTTON), onShoot, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(SHOOT_BUTTON), onShoot, FALLING);
 
   drawbullets(0, bullets);
   // drawHP();
@@ -219,8 +249,17 @@ void setup()
   TaskCheckIR.enable();
   updatePixels();
   TaskLoopAudio.enable();
-  playAudio("/death.mp3");
+  playAudio(DEATH_SOUND);
 }
+
+/*
+  _
+ | |    ___   ___  _ __
+ | |   / _ \ / _ \| '_ \
+ | |__| (_) | (_) | |_) |
+ |_____\___/ \___/| .__/
+                  |_|
+*/
 
 void loop()
 {
@@ -319,8 +358,17 @@ void drawbullets(uint8_t first, uint8_t last)
 void TaskAmmoCallback()
 {
   Serial.println("TaskAmmo");
-  if (bullets >= MAX_BULLETS) // If Ammo is already full or higher due to a bug disable.
+  if (TaskReload.isFirstIteration() && digitalRead(SHOOT_BUTTON)) // If the Button is released when reloading starts disable the task
   {
+    // TaskReload.restartDelayed(10000); // reset the runcounter to 0 the delay is completely unimportant.
+    TaskReload.enable(); // Reset runcounter when Task ends.
+    TaskReload.disable();
+    return;
+  }
+  TaskShoot.setIterations(weapons[myWeaponIndex].getIterations());
+  if (bullets >= weapons[myWeaponIndex].getMaxBullets()) // If Ammo is already full or higher due to a bug disable.
+  {
+    TaskReload.enable(); // Reset runcounter when Task ends.
     TaskReload.disable();
   }
   else
@@ -332,7 +380,16 @@ void TaskAmmoCallback()
     // strip.SetPixelColor(0,RgbColor(255,255,255));
     // strip.Show();
     // if(t1.getRunCounter()==2){digitalWrite(BUILTIN_LED,LOW);}
-    playAudio("/reload.mp3");
+    playAudio(RELOAD_SOUND);
+  }
+
+  // if(TaskReload.isLastIteration())
+  // {TaskReload.restartDelayed(1000);
+  //   TaskReload.disable();
+  // }
+  if (TaskReload.isLastIteration())
+  {
+    TaskReload.enable(); // Reset runcounter when Task ends.
   }
 }
 
@@ -341,16 +398,16 @@ void TaskRegenerateCallback()
   Serial.println("TaskRegenerate");
   hp = 100;
   alive = true;
-  bullets = MAX_BULLETS;
+  bullets = weapons[myWeaponIndex].getMaxBullets();
   drawbullets(0, bullets);
   Display.sendBuffer();
 }
 
 void playAudio(String path)
 {
-  if (mp3->isRunning())
+  if (decoder->isRunning())
   {
-    mp3->stop();
+    decoder->stop();
     // delete mp3;
     // out->flush();
     // file->close();
@@ -369,22 +426,22 @@ void playAudio(String path)
   }
   file->open(path.c_str());
   // out->begin();
-
-  mp3->begin(file, out);
+  decoder->begin(file, out);
 }
 
 void loopAudio()
 {
   if (TaskLoopAudio.getRunCounter() % 100 == 1)
   {
-    Serial.println("Still looping audio");
+    Serial.print("Free heap: ");
+    Serial.println(ESP.getFreeHeap());
   }
 
-  if (mp3->isRunning())
+  if (decoder->isRunning())
   {
-    if (!mp3->loop())
+    if (!decoder->loop())
     {
-      mp3->stop();
+      decoder->stop();
       // file->close();
     }
   }
@@ -414,7 +471,9 @@ void printTeamInformation()
 
 void draw_connected_icon()
 {
+#ifdef ENABLE_WEAPONS
   Display.drawXBMP(Display.getWidth() - 15, 0, Cast_icon_width, Cast_icon_height, Cast_icon_bits);
+#endif
 }
 
 // Needed for painless library
@@ -453,7 +512,7 @@ void MeshChangedConnectionCallback()
   if (isRunning == false)
   {
     players.clear();
-    for (uint32_t node : Lasermesh.getNodeList(true))
+    for (const uint32_t &node : Lasermesh.getNodeList(true))
     {
       players.push_back(node);
     }
@@ -479,9 +538,31 @@ void IRAM_ATTR onLaserButtonChange()
 
 void IRAM_ATTR onShoot() // Send a Milestag2 Package, Play sounds and start the ReloadTask for later. Reload task is disabled when the Button is releasded before TIME_BEFORE_RELOAD
 {
-  if(alive)
-  {TaskShoot.restart();}
-  
+  // Serial.println("Interrupt!");
+  // noInterrupts();
+  if (alive && !TaskShoot.isEnabled())
+  {
+    // if (!digitalRead(SHOOT_BUTTON))
+    // {
+    TaskShoot.restartDelayed(weapons[myWeaponIndex].getTimeBeforeShot());
+    // }
+    // else
+    // {
+    //   if (TaskReload.getRunCounter() <= 0) // If the task is enabled, but hasn't run yet --> means: Button has been released to early, disable Reload task.
+    //   {
+    //     TaskReload.disable();
+
+    //     // Serial.println("Disabled Reloading because of Button release!");
+    //   }
+    //   shootButtonReleased = true;
+    //   // Serial.println("Shoot button released");
+    //   if (TaskShoot.getIterations() <= 0)
+    //   {
+    //     TaskShoot.disable();
+    //   }
+    // }
+  }
+  // interrupts();
 }
 
 void sendMilesTag(uint8_t playerIndex, uint8_t team, uint8_t dammage)
@@ -499,7 +580,7 @@ void sendMilesTag(uint8_t playerIndex, uint8_t team, uint8_t dammage)
 void IRRecv()
 {
 
-  Serial.println("Trying to decode");
+  // Serial.println("Trying to decode");
 
   if (receiver.decode(&results))
   {
@@ -543,7 +624,7 @@ inline void CheckIRresults(decode_type_t decode_type, uint8_t teamId, uint16_t p
 
     if (hp <= 0)
     {
-      playAudio("/death.mp3");
+      playAudio(DEATH_SOUND);
       alive = false;
       TaskRegenerate.restartDelayed(Down_Time);
       you_killed_me.push_back(players[playerIndex]);
@@ -559,7 +640,7 @@ inline void CheckIRresults(decode_type_t decode_type, uint8_t teamId, uint16_t p
 void ammonition_led()
 {
   // pixels.SetPixelColor(LED_AMMUNITION, pixels.ColorHSV(bullet_led_color, 255, brightness_per_bullet * bullets));
-  uint8_t brightness = (pow(2, (float)bullets / (float)MAX_BULLETS) - 1) * 255;
+  uint8_t brightness = (pow(2, (float)bullets / (float)weapons[myWeaponIndex].getMaxBullets()) - 1) * 255;
   pixels.setPixelColor(LED_AMMUNITION, pixels.ColorHSV(bullet_led_color, 255, brightness));
 }
 void updatePixels()
@@ -664,45 +745,98 @@ void drawScore(void)
   // Display.sendBuffer();
 }
 
-void TaskShootCallback(){
+void TaskShootCallback()
+{
+  noInterrupts();
+  if (millis() >= debounce_shoot && TaskReload.getRunCounter() < 1)
+  {
 
-    if (millis() >= debounce_shoot && !TaskReload.isEnabled() && !digitalRead(SHOOT_BUTTON))
+    if (bullets > 0)
+    {
+      Serial.println("shooting");
+      sendMilesTag(myPlayerId, myTeamId, weapons[myWeaponIndex].getDammage());
+      bullets--;
+      pixels.setPixelColor(LED_SHOOTING, 0xFFFFFF);
+      pixels.show();
+      playAudio(SHOOT_SOUND);
+
+      drawbullets(0, bullets);
+
+      // You can't use Neopixels in interrupts!
+
+      pixels.setPixelColor(LED_SHOOTING, 0);
+      updatePixels();
+    }
+    else
+    {
+      playAudio(EMPTY_SOUND);
+      // bullets = 0;
+    }
+    if (TaskShoot.getIterations() == 0 || bullets == 0) // starting the reloading when it's the last iteration of the task (for burst weapons) or the magazine is empty (for full auto)
     {
 
-      if (bullets > 0)
+      Serial.println("starting Reload");
+
+      TaskReload.restartDelayed(weapons[myWeaponIndex].getTimeBeforeReload());
+      if (TaskShoot.getIterations() == -1)
       {
-        bullets--;
-        pixels.setPixelColor(LED_SHOOTING, 0xFFFFFF);
-        pixels.show();
-        sendMilesTag(myPlayerId, myTeamId, PISTOL_DAMMAGE);
-        playAudio("/shoot.mp3");
-
-        drawbullets(0, bullets);
-
-        // You can't use Neopüixels in interrupts!
-
-
-        pixels.setPixelColor(LED_SHOOTING, 0);
-        updatePixels();
+        TaskShoot.setIterations(1);
       }
-      else
-      {
-        playAudio("/empty.mp3");
-        bullets = 0;
-      }
-
-      TaskReload.restartDelayed(TIME_BEFORE_RELOAD);
-
-      debounce_shoot = millis() + SHOOT_DELAY;
     }
-    else if (TaskReload.getRunCounter() <= 0) // If the task is enabled, but hasn't run yet --> means: Button has been released to early, disable Reload task.
+    if (TaskShoot.isLastIteration())
     {
-      TaskReload.disable();
-
-      Serial.println("Disabled Reloading because of Button release!");
+      debounce_shoot = millis() + weapons[myWeaponIndex].getTimebetwennshots();
+    }
+    if (TaskShoot.getIterations() == -1 && digitalRead(SHOOT_BUTTON))
+    {
+      TaskShoot.disable();
     }
 
-  TaskShoot.disable();
+    // shootButtonReleased = false;
+  }
+  interrupts();
+}
 
+void weaponSelect()
+{
 
+  uint8_t y = 0;
+  for (auto gun : weapons)
+  {
+    gun.drawIcon(0, y);
+    y += gun.getIconHeight();
+  }
+  Display.sendBuffer();
+  while (digitalRead(AIM_BUTTON))
+  {
+    if (!digitalRead(SHOOT_BUTTON))
+    {
+      myWeaponIndex = (myWeaponIndex + 1) % (sizeof(weapons) / sizeof(weapon));
+
+      y = 0;
+      Display.clearBuffer();
+      for (uint8_t j = 0; j < sizeof(weapons) / sizeof(weapon); j++)
+      {
+        if (j == myWeaponIndex)
+        {
+          Display.setDrawColor(0); // Inverses the color so you see which weapon is currently selected.
+          Display.setBitmapMode(0);
+        }
+        else
+        {
+          Display.setDrawColor(1);
+          Display.setBitmapMode(1);
+        }
+        weapons[j].drawIcon(0, y);
+        y += weapons[j].getIconHeight() + 4;
+        Display.sendBuffer();
+      }
+    }
+    delay(100);
+  }
+  Display.setDrawColor(1);
+  Display.setBitmapMode(1);
+  Display.clear();
+
+  TaskReload.setIterations(weapons[myWeaponIndex].getMaxBullets());
 }
