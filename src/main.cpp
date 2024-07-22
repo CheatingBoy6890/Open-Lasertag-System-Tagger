@@ -14,6 +14,7 @@
 #include <IRsend.h>
 
 // #include <2g13ucheduler.h>
+#include <ArduinoJson.h>
 #include <painlessMesh.h>
 
 #include <Adafruit_NeoPixel.h>
@@ -113,12 +114,14 @@ void MeshChangedConnectionCallback();
 void nodeTimeAdjustedCallback(int32_t offset);
 
 void send_who_killed_me();
+void updateScores();
 
 // Task DisplayStuff(TASK_SECOND * 5, TASK_FOREVER, &display);
 Task TaskLoopAudio(TASK_MILLISECOND * 10, TASK_FOREVER, &loopAudio);
 Task TaskReload(0, weapons[myWeaponIndex].getMaxBullets(), &TaskAmmoCallback);
 Task TaskRegenerate(Down_Time, 1, &TaskRegenerateCallback); // Specifying with Down_Time isn't really needed because it schouldn't have an impact. But better to be safe, right?
 Task TaskSendScorePoints(SEND_POINT_INTERVAL, TASK_FOREVER, &send_who_killed_me);
+Task TaskSyncPoints(10000, TASK_FOREVER, &updateScores);
 Task TaskCheckIR(IR_CHECK_INTERVAL, TASK_FOREVER, &IRRecv);
 Task TaskShoot(100, TASK_FOREVER, &TaskShootCallback);
 
@@ -189,6 +192,7 @@ void setup()
 
   // digitalWrite(D8,LOW);
   // delay(5000);
+
   Lasermesh.setDebugMsgTypes(ERROR | DEBUG | STARTUP); // set before init() so that you can see error messages
 
   Lasermesh.init("Lasermesh", "Password", &userScheduler, 5555);
@@ -208,6 +212,7 @@ void setup()
   userScheduler.addTask(TaskCheckIR);
   userScheduler.addTask(TaskLoopAudio);
   userScheduler.addTask(TaskShoot);
+  userScheduler.addTask(TaskSyncPoints);
   // TaskSendScorePoints.enable();
 
   teamselect();
@@ -249,6 +254,7 @@ void setup()
   TaskCheckIR.enable();
   updatePixels();
   TaskLoopAudio.enable();
+  TaskSyncPoints.enable();
   playAudio(DEATH_SOUND);
 }
 
@@ -482,22 +488,55 @@ void MeshReceivedCallback(uint32_t from, String &msg)
   Serial.printf("startHere: Received from %u msg=%s\n", from, msg.c_str());
   Serial.println(msg);
 
-  if (msg = SCORE_MESSAGE)
+  if (msg == SCORE_MESSAGE)
   {
     myPoints++;
     TeamList[myTeamId].score++; // Todo: sync points between players.
     drawbullets(0, bullets);
   }
-
-  if (msg.startsWith("IR-Data:"))
+  else if (msg.startsWith("IR-Data:"))
   {
     uint64_t value = strtoull(msg.substring(msg.indexOf(":") + 1).c_str(), nullptr, 10);
     CheckIRresults(MILESTAG2, value & 0x30, value >> 6, value & 0b001111);
   }
-
-  if (msg == "bound")
+  else if (msg == "bound")
   {
     boundvest = from;
+  }
+  else if (msg.startsWith("Sync\n"))
+  {
+    JsonDocument doc;
+    Serial.print("Deserialing Json:\n");
+    Serial.println(msg.substring(msg.indexOf('{')));
+    deserializeJson(doc, msg.substring(msg.indexOf('{')));
+    doc[TeamList[myTeamId].name] = doc[TeamList[myTeamId].name] + myPoints;
+    // If your the last player you don't relay the message but broadcast it.
+    if (players.back() == Lasermesh.getNodeId())
+    {
+      String json;
+      serializeJson(doc, json);
+      String msg = "Points\n" + json;
+      Lasermesh.sendBroadcast(msg, true);
+    }
+    else
+    {
+      String json;
+      serializeJson(doc, json);
+      String msg = "Sync\n" + json;
+      Lasermesh.sendSingle(players[myPlayerId + 1], msg);
+    }
+  }
+
+  if (msg.startsWith("Points\n"))
+  {
+    JsonDocument doc;
+    deserializeJson(doc, msg.substring(msg.indexOf('{')));
+    // You have to use references in order to change values
+    for (team &t : TeamList)
+    {
+      t.score = doc[t.name];
+    }
+    drawbullets(0, bullets);
   }
 }
 
@@ -839,4 +878,24 @@ void weaponSelect()
   Display.clear();
 
   TaskReload.setIterations(weapons[myWeaponIndex].getMaxBullets());
+}
+
+void updateScores()
+{
+  JsonDocument doc;
+  if (players.size() > 1 && players[0] == Lasermesh.getNodeId()) // If your the first one in the player list.
+  {
+    Serial.println("Sending Syncing json!");
+    for (team t : TeamList)
+    {
+      doc[t.name] = 0;
+    }
+
+    doc[TeamList[myTeamId].name] = myPoints;
+    String json;
+    serializeJson(doc, json);
+    String msg = "Sync\n" + json;
+    // Send the message to the second player
+    Lasermesh.sendSingle(players[1], msg);
+  }
 }

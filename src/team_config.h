@@ -1,4 +1,9 @@
 #include <Arduino.h>
+#include <ArduinoJson.h>
+
+
+
+
 
 struct team // struct to hold team information+
 {
@@ -9,12 +14,16 @@ struct team // struct to hold team information+
 
 // save file with iso 8859-1 encoding to have german umlautes working
 team TeamList[4] = {
-    // set to exactly the number of teams or the display will look starnge
-    {"Rot", 0xFF0000U, 0},  // german for red
-    {"Blau", 0x0000FFU, 0}, // blue
-    {"Gelb", 0x7F7F00U, 0}, // yellow
-    {"Gr�n", 0x00FF00U, 0}, // german for green requires iso 8859-1 encoding
+    // set to exactly the number of teams or the display will look strange
+    //If you want special non-english characters eg. 'ä', 'é' ..., use the western iso 8859-1.
+    {"Red", 0xFF0000U, 0},  
+    {"Blue", 0x0000FFU, 0}, 
+    {"Yellow", 0x7F7F00U, 0}, 
+    {"Green", 0x00FF00U, 0}, 
 };
+
+
+JsonDocument pointsToSync;
 
 // struct player
 // {

@@ -5,7 +5,7 @@
 #include "icons.h"
 #else
 #include <U8g2lib.h>
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C Display(U8G2_R1);
+U8G2_SH1106_128X64_NONAME_F_HW_I2C Display(U8G2_R1);
 #endif
 
 // Damage values for Milestag2 protocol from https://wiki.cuvoodoo.info/lib/exe/fetch.php?media=ir-cock-grenade:mt2proto.pdf
