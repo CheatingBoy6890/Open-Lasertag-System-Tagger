@@ -1,18 +1,14 @@
 /*
-Copyright (c) <2024>, <Silas Hille>
+Copyright (c) 2024, Silas Hille
 All rights reserved.
 
 This source code is licensed under the BSD-style license found in the
-LICENSE file in the root directory of this source tree. 
+LICENSE file in the root directory of this source tree.
 
 */
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
-
-
-
-
 
 struct team // struct to hold team information+
 {
@@ -24,13 +20,12 @@ struct team // struct to hold team information+
 // save file with iso 8859-1 encoding to have german umlautes working
 team TeamList[4] = {
     // set to exactly the number of teams or the display will look strange
-    //If you want special non-english characters eg. 'ä', 'é' ..., use the western iso 8859-1.
-    {"Red", 0xFF0000U, 0},  
-    {"Blue", 0x0000FFU, 0}, 
-    {"Yellow", 0x7F7F00U, 0}, 
-    {"Green", 0x00FF00U, 0}, 
+    // If you want special non-english characters eg. 'ä', 'é' ..., use the western iso 8859-1.
+    {"Red", 0xFF0000U, 0},
+    {"Blue", 0x0000FFU, 0},
+    {"Yellow", 0x7F7F00U, 0},
+    {"Green", 0x00FF00U, 0},
 };
-
 
 JsonDocument pointsToSync;
 
