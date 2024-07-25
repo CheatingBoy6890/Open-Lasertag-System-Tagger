@@ -15,7 +15,7 @@ Warning: This project uses lasers. Be sure to **always** do your own testing by 
 
 
 <h2>What is Open-Lasertag-System?</h2>
-Open-Lasertag-System is our approach to a build Lasertag that can be played anywhere without the need of setting up repeaters or servers, whilst beeing pretty easy to build and extend to fit your needs.
+Open-Lasertag-System is our approach to a build Lasertag that can be played anywhere without the need of setting up repeaters or servers, whilst beeing pretty easy to build and extend to fit your needs. It works decentral using a WIFI mesh,so the range and fun extends the more players you have!
 
 Currently the project consists of three parts:
 
