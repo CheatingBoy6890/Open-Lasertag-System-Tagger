@@ -2,6 +2,17 @@
 
 ![_DSC8902](https://github.com/user-attachments/assets/2fc5b138-46ba-4c61-b85c-79018dc33adf)
 
+----
+
+<img src="https://github.com/user-attachments/assets/9b382106-baaf-4b78-8249-ecbceb030ddd" width="60">
+https://commons.wikimedia.org/w/index.php?curid=1668938
+
+Warning: This project uses lasers. Be sure to **always** do your own testing by meassuring voltage and current and by looking in datasheets. I am **not** responsible for any injuries you encounter from using this project. Also make sure to wear proper eye-protection. 
+
+----
+
+
+
 
 <h2>What is Open-Lasertag-System?</h2>
 Open-Lasertag-System is our approach to a build Lasertag that can be played anywhere without the need of setting up repeaters or servers, whilst beeing pretty easy to build and extend to fit your needs.
