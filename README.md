@@ -33,13 +33,14 @@ This is the repository for the taggers of the system. here you'll find all the n
 
  - A 3D-printer capable of printing 20cmx20cm
  - Soldering iron
- - An ESP 8266 d1 mini
- - A piece of LED strip 6 LEDs
- - OLED 
+ - An ESP 8266 wemos d1 mini
+ - A piece of LED strip 6 LEDs ws2812b
+ - OLED 1,3" sh1106 or ssd1306
  - At least slightly transparent filament
  - PCB or perf matrix board
  - Cable
- - Pin header
+ - Pin headers
+ - Crimp equipment and or breadboard cables
  - 16 or 32 Ω 40mm  speaker
  - 2x electrolytic capacitor min 5V 25uF
  - 2x ceramic capacitor min 5V about 0,1uF
