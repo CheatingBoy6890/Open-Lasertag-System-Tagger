@@ -17,11 +17,13 @@ Warning: This project uses lasers. Be sure to **always** do your own testing by 
 <h2>What is Open-Lasertag-System?</h2>
 Open-Lasertag-System is our approach to a build Lasertag that can be played anywhere without the need of setting up repeaters or servers, whilst beeing pretty easy to build and extend to fit your needs. It works decentral using a WIFI mesh,so the range and fun extends the more players you have!
 
-Currently the project consists of three parts:
+Currently the project consists of four parts:
 
  1. The Taggers are fully functional with features such as different firemodes and score synchronization
  2. The vests. The first prototype is built but not yet tested with the taggers.
  3. Targets : For those who don't want to shoot at each other can just shoot at these. The plan also ist to intergrate the further into the system for modes like capture the Flag
+ 4. Logger: Counts wich target have been hit by whom 
+
 
 ----
 
