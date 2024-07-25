@@ -1,0 +1,6 @@
+soot.mp3 : Sound Effect from <a href="https://pixabay.com/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=81720">Pixabay</a>
+reload.mp3: Sound Effect from <a href="https://pixabay.com/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=6248">Pixabay</a>
+empty.mp3 : Sound Effect from <a href="https://pixabay.com/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=6209">Pixabay</a> 
+death.mp3 : Sound Effect from <a href="https://pixabay.com/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=89485">Pixabay</a>
+
+The files were converted to .wav using audacity (https://www.audacityteam.org/)
