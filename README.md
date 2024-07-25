@@ -32,5 +32,32 @@ This is the repository for the taggers of the system. here you'll find all the n
 **What you'll need:**
 
  - A 3D-printer capable of printing 20cmx20cm
+ - Soldering iron
  - An ESP 8266 d1 mini
- - ... 
+ - A piece of LED strip 6 LEDs
+ - OLED 
+ - At least slightly transparent filament
+ - PCB or perf matrix board
+ - Cable
+ - Pin header
+ - 16 or 32 Ω 40mm  speaker
+ - 2x electrolytic capacitor min 5V 25uF
+ - 2x ceramic capacitor min 5V about 0,1uF
+ - 3x BC547 or other npn transistor with simlar pinout
+ - 2x Red laserpointer head
+ - Tsop 4838
+ - LACO LCU985072A Laserdiode, 50 mW, 980 nm, Ø 5,6 mm
+ - 2x Button
+ - Switch
+ - 2x Resistor 10kΩ
+ -  Resistor 1kΩ
+ -  Resistor 160Ω
+ -  Resistor 12Ω
+ -  Resistor 39Ω
+ -  Resistor 0Ω (Replace with higher resistance when your speaker has below 16Ω)
+ -  Battery clip
+ -  Battery holder 4 AA batteries
+ -  6x Screw M4 x40mm
+ - 3mm diameter piece of metal rod or pipe
+ - Rubber band
+ - Time
