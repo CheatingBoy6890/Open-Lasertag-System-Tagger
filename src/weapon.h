@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2024, Silas Hille
+Copyright (c) 2024, Silas Hille and Linus Hille
 All rights reserved.
 
 This source code is licensed under the BSD-style license found in the
