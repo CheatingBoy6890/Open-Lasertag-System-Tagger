@@ -23,6 +23,13 @@ All 3D files are in the FCstd format. They can be opened and edited or converted
 The schematic for using a breadboard is in the .diy format. These files can be viewed and edited using DIY Layout creator which you can find here:
 https://bancika.github.io/diy-layout-creator/
 ##
+
+-----
+
+## The Displays
+
+When buying Oleds from not-so-trustworthy sellers on Amazon or Aliexpress, they might claim to send you an SSD_1306 Oled, but in fact it's one with an SH_1106 controller. You notice that problem, when the pixles on the display are shifted a bit, the you can just change the Display settings to SH_1106 in the icons.h file.
+
 ## Building the Tagger
 1. Make sure you have everything you need
 2. Print out the two Tagger parts and the trigger
