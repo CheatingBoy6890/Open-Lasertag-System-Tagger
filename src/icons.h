@@ -4,9 +4,9 @@
 // Uncomment one of these, you can actually use any of the supported Displays as long as their 128x64 pixels and using I2C
 
 // SH1106 Display
-// U8G2_SH1106_128X64_NONAME_F_HW_I2C Display(U8G2_R1);
+U8G2_SH1106_128X64_NONAME_F_HW_I2C Display(U8G2_R1);
 // SSD 1306 Display
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C Display(U8G2_R1);
+// U8G2_SSD1306_128X64_NONAME_F_HW_I2C Display(U8G2_R1);
 
 #define Cast_icon_width 15
 #define Cast_icon_height 12
