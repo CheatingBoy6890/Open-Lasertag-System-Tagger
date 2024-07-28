@@ -45,23 +45,27 @@ To flash the program to your ESP8266 you need to have <a href="https://code.visu
 <a>https://randomnerdtutorials.com/vs-code-platformio-ide-esp32-esp8266-arduino/</a> To flash an ESP8266 from Windows you might need additional drivers, you'll find a tutorial on this here https://randomnerdtutorials.com/install-esp32-esp8266-usb-drivers-cp210x-windows/
 
 ## Building the Tagger
-1. Make sure you have got all the required parts
-1. Sclice the stl files and print them with a 3d-printer
-1. Remove the supports from the 3D printed parts
+1. Make sure you have got all the required parts ![_DSC8940](https://github.com/user-attachments/assets/b2a32ad6-7d33-4d10-82ea-54e372a37102)![Widerstände](https://github.com/user-attachments/assets/b9539681-ab67-416f-883a-9484d7ccb0ce)
+1. Slice the stl files and print them with a 3d-printer 
+1. Remove the supports from the 3D printed parts ![3D-Parts](https://github.com/user-attachments/assets/daf8d708-872c-4a57-96ce-114b4d051c32)
 1. Flash your ESP8266 with the programm and the sound files
    - Open Visual Studio Code
    - Click Open Folder and choose the Folder you downloaded: ![Open_Folder](https://github.com/user-attachments/assets/cd5b0aad-ef70-473c-af14-2572854eef7a)
    - When it askes you, click "trust the authors:  ![trust_the_authors](https://github.com/user-attachments/assets/ed0244dd-f67b-48c4-ac9c-b3127e19d472)
    - Connect the ESP8266 to your pc and click "upload" to upload the program and then press "build filesystem image" and after that "upload file system image: ![Upload_1](https://github.com/user-attachments/assets/24741195-057c-4338-a4b5-8ada0f964bb4)
 1. Solder the pins to your ESP
-1. Solder all components and pin headers to the PCB or matrix board
-1. Solder cables to the buttons,the TSOP and the speaker and crimp sockets at the ends if needed
-1. Take one of the red laser pointer heads and tear out the laser
-1. Grind down about 2mm of the laser pointer head housing 
-1. Glue the infrared laser  in the housing
+   - Make sure that the ESP8266 board is facing the top.![Solder_pins](https://github.com/user-attachments/assets/6c253076-f8e8-4e83-94db-79a7b5208ae9) (check and cross from pixabay Bild von <a href="https://pixabay.com/de/users/janjf93-3084263/?utm_source=link-attribution&utm_medium=referral&utm_campaign=image&utm_content=2061132">Jan</a> auf <a href="https://pixabay.com/de//?utm_source=link-attribution&utm_medium=referral&utm_campaign=image&utm_content=2061132">Pixabay</a> Bild von <a href="https://pixabay.com/de/users/openclipart-vectors-30363/?utm_source=link-attribution&utm_medium=referral&utm_campaign=image&utm_content=1292787">OpenClipart-Vectors</a> auf <a href="https://pixabay.com/de//?utm_source=link-attribution&utm_medium=referral&utm_campaign=image&utm_content=1292787">Pixabay</a>
+
+1. Solder all components and pin headers to the PCB or matrix board ![finished](https://github.com/user-attachments/assets/af602714-4c9a-4367-9e81-362ab4928637)
+1. Solder cables to the buttons,the TSOP and the speaker and crimp sockets at the ends if needed![IMG_20240727_174523405](https://github.com/user-attachments/assets/5e5215f2-cea3-4b11-8450-102087203c9a)
+1. Put the IR-LaserDiode in the casing: 
+   - Take one of the red laser pointer heads and tear out the laser
+   - Grind down about 1mm of the laser pointer head housing 
+   - Glue the infrared laser  in the housing ![IR-LaserDiode](https://github.com/user-attachments/assets/6ce1f32c-a13d-473a-a34d-97c19a2ba8bc)
 1. Solder cables to the LED strip and crimp sockets
 1. Solder the red cable of your battery clip to the switch and connect the power pin headers on the PCB
-1. Glue the lasers ,the Tsop ,the LED strip ,the speaker and the switch in place
+1. Glue the lasers ,the Tsop ,the LED strip ,the speaker and the switch in place![IMG_20240727_181151308](https://github.com/user-attachments/assets/1f969c5b-4b50-41cb-8025-67d653756c49)
+
 1. Connect all your components to the PCB in the gun housing
 1. Cut a 3mm diamter x 35mm piece of metal rod or pipe
 1. Put in the trigger using the piece of rod
