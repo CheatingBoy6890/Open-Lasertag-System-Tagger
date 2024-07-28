@@ -31,6 +31,8 @@ Currently the project consists of four parts:
 
 This is the repository for the taggers of the system. here you'll find all the neccessary files on how to build a tagger your self.
 
+ **The instructions on building can be found in the <a href="https://github.com/CheatingBoy6890/Open-Lasertag-System-Tagger/tree/main/Hardware">Hardware folder</a>**
+
 **What you'll need:**
 
  - A 3D-printer capable of printing 20cmx20cm
