@@ -23,7 +23,7 @@ Currently the project consists of four parts:
  2. The vests. The first prototype is built but not yet tested with the taggers.
  3. Targets : For those who don't want to shoot at each other can just shoot at these. The plan also ist to intergrate the further into the system for modes like capture the Flag
  4. Logger: Counts wich target have been hit by whom 
-
+ 5. There's a Laser grenade planned
 
 ----
 
