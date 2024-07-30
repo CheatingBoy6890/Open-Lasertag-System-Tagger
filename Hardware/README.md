@@ -79,6 +79,14 @@ To flash the program to your ESP8266 you need to have <a href="https://code.visu
 If you have the PCB_v2 but want to meassure the voltage of the batteries you can use this sketchy solution: ![Meassure_voltage](https://github.com/user-attachments/assets/e6f3991b-ef6e-481b-bb32-a33fe8d20cd7)
 Don't forget to uncomment the #define CHECK_BATTERY in main.cpp
 
+If you play without vest or you run into receiving issues, add a cover lens on the IR-receiver.
 
+
+![IMG_20240730_172513548](https://github.com/user-attachments/assets/a967302a-6de0-4a05-b73c-3eadea327452)
+
+Glue it to one half of the tagger, so you can still open it.
+
+
+![IMG_20240730_172555006](https://github.com/user-attachments/assets/5fbfe981-7fe3-4ce6-849b-0cf6ce63035e)
 
 
