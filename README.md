@@ -68,6 +68,8 @@ This is the repository for the taggers of the system. here you'll find all the n
  -  6x Screw M4 x40mm
  - 3mm diameter piece of metal rod or pipe
  - Rubber band
+  
+ - cover lens (optional)
  - Time
 
 
