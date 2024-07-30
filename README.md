@@ -74,3 +74,4 @@ This is the repository for the taggers of the system. here you'll find all the n
 
 
 Congratulations you made it to the end of this readme. If you want this to be longer consider buying us a coffe (https://www.paypal.com/donate/?hosted_button_id=2RZBTA5GMNH6S) so we can make all files longer and better.
+And don't forget to cuddle your cat!
