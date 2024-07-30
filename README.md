@@ -23,13 +23,15 @@ Currently the project consists of four parts:
  2. The vests. The first prototype is built but not yet tested with the taggers.
  3. Targets : For those who don't want to shoot at each other can just shoot at these. The plan also ist to intergrate the further into the system for modes like capture the Flag
  4. Logger: Counts wich target have been hit by whom 
-
+ 5. There's a Laser grenade planned
 
 ----
 
 <h2>What is this repository?</h2>
 
 This is the repository for the taggers of the system. here you'll find all the neccessary files on how to build a tagger your self.
+
+ **The instructions on building can be found in the <a href="https://github.com/CheatingBoy6890/Open-Lasertag-System-Tagger/tree/main/Hardware">Hardware folder</a>**
 
 **What you'll need:**
 
@@ -60,9 +62,15 @@ This is the repository for the taggers of the system. here you'll find all the n
  -  Resistor 0Ω (Replace with higher resistance when your speaker has below 16Ω)
  -  Resistor 100kΩ (only PCB V3)
  -  Resistor 200kΩ (only PCB V3)
+ -  FRX04060F resetable fuse (only PCB V3.1)
  -  Battery clip
  -  Battery holder 4 AA batteries
  -  6x Screw M4 x40mm
  - 3mm diameter piece of metal rod or pipe
  - Rubber band
+  
+ - cover lens (optional)
  - Time
+
+
+Congratulations you made it to the end of this readme. If you want this to be longer consider buying us a coffe (https://www.paypal.com/donate/?hosted_button_id=2RZBTA5GMNH6S) so we can make all files longer and better.
