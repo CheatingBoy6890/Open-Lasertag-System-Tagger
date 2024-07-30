@@ -140,9 +140,9 @@ public:
 // static const weapon burst_pistol(pistol_burst_bits, pistol_burst_width, pistol_burst_height, 3, 400, 0, 100, 8, 27, 2000, false, 450);
 #ifdef ENABLE_WEAPONS
 static weapon weapons[]{
-    {pistol_bits, pistol_width, pistol_height, 1, 400, 0, 0, 9, 12, 1500, false, 600},                    // pistol
-    {maschinegun_bits, maschinegun_width, maschinegun_height, -1, 0, 0, 10, 7, 48, 5000, false, 300},     // maschinegun
-    {pistol_burst_bits, pistol_burst_width, pistol_burst_height, 3, 400, 0, 100, 8, 27, 2000, false, 450} // burst_pistol
+    {pistol_bits, pistol_width, pistol_height, 1, 400, 0, 0, /*dmg*/ 12, 12, 1500, false, 600},                   // pistol
+    {maschinegun_bits, maschinegun_width, maschinegun_height, -1, 0, 0, 10, /*dmg*/ 7, 48, 5000, false, 300},     // maschinegun
+    {pistol_burst_bits, pistol_burst_width, pistol_burst_height, 3, 400, 0, 100, /*dmg*/ 8, 27, 2000, false, 450} // burst_pistol
 };
 
 #else

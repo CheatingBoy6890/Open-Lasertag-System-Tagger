@@ -63,6 +63,8 @@ const char *SHOOT_SOUND = "/shoot.wav";
 
 #define IR_CHECK_INTERVAL 100
 
+#define CHECK_BATTERY // Check the voltage of the battery, comment this out if you've got PCB_v2 since it doesn't have the resistors to meassure the voltage.
+
 // #define PISTOL_DAMMAGE 9 // The index of the Dammage array in team_config.h
 // #define MAX_BULLETS 14   // With BULLET_WIDTH 10 and space 30 x 90 and Bullet_WIDTH 10 theres Space for 48 bullets
 #define BULLET_WIDTH 10
@@ -99,6 +101,7 @@ void TaskShootCallback();
 
 void playAudio(String path);
 void loopAudio();
+void mesassure_battery();
 
 void printTeamInformation();
 void teamselect();
@@ -355,6 +358,10 @@ void drawbullets(uint8_t first, uint8_t last)
   }
 
   drawHP();
+
+#ifdef CHECK_BATTERY
+  mesassure_battery();
+#endif
   Display.sendBuffer();
 }
 // void fillAmmo(uint8_t amount)
@@ -755,7 +762,7 @@ void teamselect()
   pixels.show();
 
 #ifdef DEBUG_MODE
-  Serial.print("finished Teamselection, Team:");
+  Serial.print(F("finished Teamselection, Team:"));
   Serial.println(myTeamId);
 #endif
 }
@@ -763,7 +770,7 @@ void teamselect()
 void Connect_Vest()
 {
   Display.setCursor(0, 20);
-  Display.print("Now connecting vest!");
+  Display.print(F("Now connecting vest!"));
   Display.sendBuffer();
   uint64_t connect_time = millis() + VEST_CONNECTTIME;
   while (connect_time > millis())
@@ -771,7 +778,7 @@ void Connect_Vest()
     if (digitalRead(SHOOT_BUTTON) == LOW)
     {
 
-      Serial.println("Sending packet to connect vest");
+      Serial.println(F("Sending packet to connect vest"));
       sendMilesTag(std::distance(players.begin(), std::find(players.begin(), players.end(), Lasermesh.getNodeId())), myTeamId, 15);
       delay(100);
     }
@@ -800,7 +807,7 @@ void TaskShootCallback()
 
     if (bullets > 0)
     {
-      Serial.println("shooting");
+      Serial.println(F("shooting"));
       sendMilesTag(myPlayerId, myTeamId, weapons[myWeaponIndex].getDammage());
       bullets--;
       pixels.setPixelColor(LED_SHOOTING, 0xFFFFFF);
@@ -822,7 +829,7 @@ void TaskShootCallback()
     if (TaskShoot.getIterations() == 0 || bullets == 0) // starting the reloading when it's the last iteration of the task (for burst weapons) or the magazine is empty (for full auto)
     {
 
-      Serial.println("starting Reload");
+      Serial.println(F("starting Reload"));
 
       TaskReload.restartDelayed(weapons[myWeaponIndex].getTimeBeforeReload());
       if (TaskShoot.getIterations() == -1)
@@ -893,7 +900,7 @@ void updateScores()
   JsonDocument doc;
   if (players.size() > 1 && players[0] == Lasermesh.getNodeId()) // If your the first one in the player list.
   {
-    Serial.println("Sending Syncing json!");
+    Serial.println(F("Sending Syncing json!"));
     for (team t : TeamList)
     {
       doc[t.name] = 0;
@@ -905,5 +912,20 @@ void updateScores()
     String msg = "Sync\n" + json;
     // Send the message to the second player
     Lasermesh.sendSingle(players[1], msg);
+  }
+}
+
+void mesassure_battery()
+{
+  float voltage = analogRead(A0) * 0.005394;
+  Display.setCursor(40, 18);
+  Display.printf("V=%.1f", voltage);
+  if (voltage < (float)4)
+  {
+    Display.clearBuffer();
+    Display.setCursor(0, 20);
+    Display.print(F("Low \nBattery!"));
+    playAudio(F("/death.wav"));
+    // delay(1000); // You actually should never use delay in a Task but I was to lazy to search a good way to pause anything printing to the display for one second.
   }
 }
