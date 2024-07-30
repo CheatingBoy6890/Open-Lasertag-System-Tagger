@@ -65,7 +65,6 @@ To flash the program to your ESP8266 you need to have <a href="https://code.visu
 1. Solder cables to the LED strip and crimp sockets
 1. Solder the red cable of your battery clip to the switch and connect the power pin headers on the PCB
 1. Glue the lasers ,the Tsop ,the LED strip ,the speaker and the switch in place![IMG_20240727_181151308](https://github.com/user-attachments/assets/1f969c5b-4b50-41cb-8025-67d653756c49)
-
 1. Connect all your components to the PCB in the gun housing
 1. Cut a 3mm diamter x 35mm piece of metal rod or pipe
 1. Put in the trigger using the piece of rod
@@ -74,6 +73,12 @@ To flash the program to your ESP8266 you need to have <a href="https://code.visu
 1. Close the Tagger and screw the two parts together
 1. Slightly pull the trigger and then turn on power
 1. Have fun
+
+## Optional
+
+If you have the PCB_v2 but want to meassure the voltage of the batteries you can use this sketchy solution: ![Meassure_voltage](https://github.com/user-attachments/assets/e6f3991b-ef6e-481b-bb32-a33fe8d20cd7)
+Don't forget to uncomment the #define CHECK_BATTERY in main.cpp
+
 
 
 
