@@ -62,6 +62,7 @@ This is the repository for the taggers of the system. here you'll find all the n
  -  Resistor 0Ω (Replace with higher resistance when your speaker has below 16Ω)
  -  Resistor 100kΩ (only PCB V3)
  -  Resistor 200kΩ (only PCB V3)
+ -  FRX04060F resetable fuse (only PCB V3.1)
  -  Battery clip
  -  Battery holder 4 AA batteries
  -  6x Screw M4 x40mm
