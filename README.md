@@ -72,6 +72,12 @@ This is the repository for the taggers of the system. here you'll find all the n
  - cover lens (optional)
  - Time
 
+   ## Who are we?
+   We are two German students. Since we are twins, we build and programm a lot of projects together. We create all of our projects in our free time. Feel free to mail any questions to cyberfox3801@proton.me .
+   We want to motivate people to discover what is possible using 3D printing and microcontrollers. \
+   The most productive worker of our small group is our cat Susi. ![image](https://github.com/user-attachments/assets/7617c73a-d89d-487c-a4de-c76f1b3753f4)
+
+
 
 Congratulations you made it to the end of this readme. If you want this to be longer consider buying us a coffe (https://www.paypal.com/donate/?hosted_button_id=2RZBTA5GMNH6S) so we can make all files longer and better 
 and don't forget to cuddle your cat!
