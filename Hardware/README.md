@@ -93,7 +93,7 @@ Glue it to one half of the tagger, so you can still open it.
 
 ## Tips and Tricks 
 
-Making sure the Infrared laser works is possible by checking it with a phone camera. This works with every proper phone, so iPhones obviously do not work.
+Making sure the Infrared laser works is possible by checking it with a phone camera. This works with every decent phone, so iPhones obviously do not work.
 The 1mw laser can only be seen in darkness.
 Be aware that strong infrared lasers can permanently damage your camera sensor.
 
