@@ -45,15 +45,16 @@ const uint8_t IR_LASER = D6;
 
 const uint8_t IR_RECEIVER = D5;
 
-const char *SCORE_MESSAGE = "Never gonna give you up!";
+const char *SCORE_MESSAGE PROGMEM = "Never gonna give you up!";
+const char *VEST_CONNECT_ACKNOWLEDGE_MESSAGE = "bound";
 
-const char *DEATH_SOUND = "/death.wav";
-const char *RELOAD_SOUND = "/reload.wav";
-const char *EMPTY_SOUND = "/empty.wav";
-const char *SHOOT_SOUND = "/shoot.wav";
+const char *DEATH_SOUND PROGMEM = "/death.wav";
+const char *RELOAD_SOUND PROGMEM = "/reload.wav";
+const char *EMPTY_SOUND PROGMEM = "/empty.wav";
+const char *SHOOT_SOUND PROGMEM = "/shoot.wav";
 
-#define TEAM_SelTime 5000     // Time when turning on to select teams
-#define VEST_CONNECTTIME 1000 // time to connect a vest
+#define TEAM_SelTime 5000      // Time when turning on to select teams
+#define VEST_CONNECTTIME 15000 // time to connect a vest
 
 #define Down_Time 5000 // Time it takes to regen when you've been shot
 // #define SHOOT_DELAY 150         // Firerate
@@ -99,7 +100,7 @@ void TaskAmmoCallback();
 void TaskRegenerateCallback();
 void TaskShootCallback();
 
-void playAudio(String path);
+void playAudio(const char *path);
 void loopAudio();
 void mesassure_battery();
 
@@ -158,7 +159,7 @@ volatile bool shootButtonReleased = false;
 void setup()
 {
   Serial.begin(115200);
-  Serial.println("setup");
+  Serial.println(F("setup"));
   pinMode(SDA, OUTPUT);
   pinMode(SCL, OUTPUT);
   // pinMode(IR_LASER, OUTPUT);
@@ -206,15 +207,14 @@ void setup()
 
   Lasermesh.setDebugMsgTypes(ERROR | DEBUG | STARTUP); // set before init() so that you can see error messages
 
-  Lasermesh.init("Lasermesh", "Password", &userScheduler, 5555);
+  Lasermesh.init(F("Lasermesh"), F("Password"), &userScheduler, 5555);
   Lasermesh.onReceive(&MeshReceivedCallback);
   Lasermesh.onNewConnection(&MeshNewConnectionCallback);
   Lasermesh.onChangedConnections(&MeshChangedConnectionCallback);
   Lasermesh.onNodeTimeAdjusted(&nodeTimeAdjustedCallback);
 
-  Serial.printf("NodeId = %u", Lasermesh.getNodeId());
-
 #ifdef DEBUG_MODE
+  Serial.print(F("NodeId = "));
   Serial.println(Lasermesh.getNodeId());
 #endif
   userScheduler.addTask(TaskReload);
@@ -247,9 +247,13 @@ void setup()
   receiver.enableIRIn(); // sets the Pin to INPUT automatically
   transmitter.begin();
 
-  Serial.println("Now connecting vest");
+#ifdef DEBUG_MODE
+  Serial.println(F("Now connecting vest"));
+#endif
   Connect_Vest();
-  Serial.println("finished Vest connection");
+#ifdef DEBUG_MODE
+  Serial.println(F("finished Vest connection"));
+#endif
 
   attachInterrupt(digitalPinToInterrupt(AIM_BUTTON), onLaserButtonChange, CHANGE);
 
@@ -378,7 +382,9 @@ void drawbullets(uint8_t first, uint8_t last)
 
 void TaskAmmoCallback()
 {
-  Serial.println("TaskAmmo");
+#ifdef DEBUG_MODE
+  Serial.println(F("TaskAmmo"));
+#endif
   if (TaskReload.isFirstIteration() && digitalRead(SHOOT_BUTTON)) // If the Button is released when reloading starts disable the task
   {
     // TaskReload.restartDelayed(10000); // reset the runcounter to 0 the delay is completely unimportant.
@@ -416,15 +422,20 @@ void TaskAmmoCallback()
 
 void TaskRegenerateCallback()
 {
-  Serial.println("TaskRegenerate");
+#ifdef DEBUG_MODE
+  Serial.println(F("TaskRegenerate"));
+#endif
   hp = 100;
   alive = true;
   bullets = weapons[myWeaponIndex].getMaxBullets();
   drawbullets(0, bullets);
   Display.sendBuffer();
+  if(boundvest != 0){
+    Lasermesh.sendSingle(boundvest, "alive");
+  }
 }
 
-void playAudio(String path)
+void playAudio(const char *path)
 {
   if (decoder->isRunning())
   {
@@ -445,18 +456,20 @@ void playAudio(String path)
     // out->SetOutputModeMono(true);
     // out->SetGain(1);
   }
-  file->open(path.c_str());
+  file->open(path);
   // out->begin();
   decoder->begin(file, out);
 }
 
 void loopAudio()
 {
+#ifdef DEBUG_MODE
   if (TaskLoopAudio.getRunCounter() % 100 == 1)
   {
-    Serial.print("Free heap: ");
+    Serial.print(F("Free heap: "));
     Serial.println(ESP.getFreeHeap());
   }
+#endif
 
   if (decoder->isRunning())
   {
@@ -492,36 +505,48 @@ void printTeamInformation()
 
 void draw_connected_icon()
 {
-#ifdef ENABLE_WEAPONS
+
   Display.drawXBMP(Display.getWidth() - 15, 0, Cast_icon_width, Cast_icon_height, Cast_icon_bits);
-#endif
 }
 
 // Needed for painless library
 void MeshReceivedCallback(uint32_t from, String &msg)
 {
-  Serial.printf("startHere: Received from %u msg=%s\n", from, msg.c_str());
+  // Serial.printf("startHere: Received from %u msg=%s\n", from, msg.c_str());
+  // Serial.println(msg);
+  Serial.print(F("--> New message from: "));
+  Serial.println(from);
+  Serial.print(F("Message: "));
   Serial.println(msg);
 
   if (msg == SCORE_MESSAGE)
   {
+    #ifdef DEBUG_MODE
+      Serial.println(F("Got a point"));
+    #endif
     myPoints++;
     TeamList[myTeamId].score++; // Todo: sync points between players.
     drawbullets(0, bullets);
   }
   else if (msg.startsWith("IR-Data:"))
   {
-    uint64_t value = strtoull(msg.substring(msg.indexOf(":") + 1).c_str(), nullptr, 10);
-    CheckIRresults(MILESTAG2, value & 0x30, value >> 6, value & 0b001111);
+    uint32_t value = strtoul(msg.substring(msg.indexOf(":") + 1).c_str(), nullptr, 10);
+    #ifdef DEBUG_MODE
+      Serial.println(value);
+    #endif
+    CheckIRresults(MILESTAG2, (value & 0B110000) >> 4, value >> 6, value & 0b001111);
   }
-  else if (msg == "bound")
+  else if (msg == VEST_CONNECT_ACKNOWLEDGE_MESSAGE)
   {
+    #ifdef DEBUG_MODE
+      Serial.println(F("Connected Vest!"));
+    #endif
     boundvest = from;
   }
   else if (msg.startsWith("Sync\n"))
   {
     JsonDocument doc;
-    Serial.print("Deserialing Json:\n");
+    Serial.print(F("Deserialing Json:\n"));
     Serial.println(msg.substring(msg.indexOf('{')));
     deserializeJson(doc, msg.substring(msg.indexOf('{')));
     doc[TeamList[myTeamId].name] = doc[TeamList[myTeamId].name] + myPoints;
@@ -557,12 +582,14 @@ void MeshReceivedCallback(uint32_t from, String &msg)
 
 void MeshNewConnectionCallback(uint32_t nodeId)
 {
-  Serial.printf("--> startHere: New Connection, nodeId = %u\n", nodeId);
+  // Serial.printf("--> startHere: New Connection, nodeId = %u\n", nodeId);
+  Serial.print(F("--> New Connection from: "));
+  Serial.println(nodeId);
 }
 
 void MeshChangedConnectionCallback()
 {
-  Serial.printf("Changed connections\n");
+  Serial.println(F("Changed connections"));
   if (isRunning == false)
   {
     players.clear();
@@ -640,17 +667,17 @@ void IRRecv()
   {
 
 #ifdef DEBUG_MODE // Print on serial only when DEBUG_MODE is defined at the top.
-    Serial.println("#################");
-    Serial.print("Decode Type:");
+    Serial.println(F("#################"));
+    Serial.print(F("Decode Type:"));
     Serial.println(results.decode_type);
 
-    Serial.print("Team:");
+    Serial.print(F("Team:"));
     Serial.println(results.command >> 4);
 
-    Serial.print("Player:");
+    Serial.print(F("Player:"));
     Serial.println(results.address);
 
-    Serial.print("Dammage:");
+    Serial.print(F("Dammage:"));
     Serial.println(results.command & 0xF);
 #endif
 
@@ -672,7 +699,7 @@ inline void CheckIRresults(decode_type_t decode_type, uint8_t teamId, uint16_t p
 
   if (decode_type == MILESTAG2 && teamId != myTeamId && alive)
   {
-    Serial.print("Hp: ");
+    Serial.print(F("Hp: "));
     hp = max(hp - Damage[damage], 0);
     Serial.println(hp);
 
@@ -680,6 +707,9 @@ inline void CheckIRresults(decode_type_t decode_type, uint8_t teamId, uint16_t p
     {
       playAudio(DEATH_SOUND);
       alive = false;
+      if(boundvest != 0){
+        Lasermesh.sendSingle(boundvest,F("dead"));
+      }
       TaskRegenerate.restartDelayed(Down_Time);
       you_killed_me.push_back(players[playerIndex]);
       if (!TaskSendScorePoints.enable()) // Check if the task wasn't  aleready running
@@ -709,7 +739,7 @@ void updatePixels()
 void send_who_killed_me()
 {
 
-  Serial.println("Now sending who killed me");
+  Serial.println(F("Now sending who killed me"));
   you_killed_me.shrink_to_fit();
   auto it = you_killed_me.begin();
   while (it != you_killed_me.end())
@@ -734,7 +764,7 @@ void send_who_killed_me()
 void teamselect()
 {
 #ifdef DEBUG_MODE
-  Serial.println("starting teamselection.");
+  Serial.println(F("starting teamselection."));
 #endif
 
   unsigned long seltime = millis() + TEAM_SelTime;
@@ -750,7 +780,7 @@ void teamselect()
       pixels.show();
 
 #ifdef DEBUG_MODE
-      Serial.print("Team: ");
+      Serial.print(F("Team: "));
       Serial.println(myTeamId);
 #endif
     }
@@ -780,6 +810,7 @@ void Connect_Vest()
 
       Serial.println(F("Sending packet to connect vest"));
       sendMilesTag(std::distance(players.begin(), std::find(players.begin(), players.end(), Lasermesh.getNodeId())), myTeamId, 15);
+      playAudio(SHOOT_SOUND);
       delay(100);
     }
     Lasermesh.update();
@@ -925,7 +956,7 @@ void mesassure_battery()
     Display.clearBuffer();
     Display.setCursor(0, 20);
     Display.print(F("Low \nBattery!"));
-    playAudio(F("/death.wav"));
+    playAudio(DEATH_SOUND);
     // delay(1000); // You actually should never use delay in a Task but I was to lazy to search a good way to pause anything printing to the display for one second.
   }
 }
