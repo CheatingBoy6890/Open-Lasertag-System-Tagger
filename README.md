@@ -20,7 +20,7 @@ Open-Lasertag-System is our approach to a build Lasertag that can be played anyw
 Currently the project consists of five parts:
 
  1. The Taggers are fully functional with features such as different firemodes and score synchronization
- 2. The vests. The first prototype is built but not yet tested with the taggers.
+ 2. The vests are functional and connect wirelessly with the corresponding tagger
  3. Targets : For those who don't want to shoot at each other can just shoot at these. The plan also ist to intergrate the further into the system for modes like capture the Flag
  4. Logger: Counts wich target have been hit by whom 
  5. There's a Laser grenade planned
