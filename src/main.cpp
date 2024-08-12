@@ -46,7 +46,7 @@ const uint8_t IR_LASER = D6;
 const uint8_t IR_RECEIVER = D5;
 
 const char *SCORE_MESSAGE PROGMEM = "Never gonna give you up!";
-const char *VEST_CONNECT_ACKNOWLEDGE_MESSAGE = "bound";
+const char *VEST_CONNECT_ACKNOWLEDGE_MESSAGE PROGMEM = "bound";
 
 const char *DEATH_SOUND PROGMEM = "/death.wav";
 const char *RELOAD_SOUND PROGMEM = "/reload.wav";
@@ -118,8 +118,6 @@ void sendMilesTag(uint8_t player, uint8_t team, uint8_t dammage);
 void CheckIRresults(decode_type_t decode_type, uint8_t teamId, uint16_t playerIndex, uint8_t damage);
 void IRAM_ATTR onLaserButtonChange();
 
-void Connect_Vest();
-
 void MeshReceivedCallback(uint32_t from, String &msg);
 void MeshNewConnectionCallback(uint32_t nodeId);
 void MeshChangedConnectionCallback();
@@ -186,6 +184,7 @@ void setup()
   // weapons[myWeaponIndex].DrawIcon(Display,20,20);
   weapons[myWeaponIndex].createShootTask(TaskShoot);
   weapons[myWeaponIndex].drawIcon(0, 0);
+  TaskReload.setInterval(weapons[myWeaponIndex].getReloadInterval());
   Display.sendBuffer();
   delay(1000);
   // pixels.SetPixelColor(0,RgbColor(20,100,255));
@@ -228,9 +227,15 @@ void setup()
 
   teamselect();
 
-  // Weaponselect
+  // Remind players how to connect a vest
+  Display.clearBuffer();
+  Display.setCursor(0, 40);
+  Display.print(F("Just shoot at\na vest to\nconnect to it"));
+  Display.sendBuffer();
+  delay(1000);
 
-  TaskReload.setInterval(weapons[myWeaponIndex].getReloadInterval());
+
+
 
   pinMode(AIM_BUTTON, INPUT_PULLUP); // Set pinmode again because ESP8266audio blocks these for I2s which isn't needed. With redeclaration there's no problem.
   pinMode(AIM_LASER, OUTPUT);
@@ -250,7 +255,7 @@ void setup()
 #ifdef DEBUG_MODE
   Serial.println(F("Now connecting vest"));
 #endif
-  Connect_Vest();
+
 #ifdef DEBUG_MODE
   Serial.println(F("finished Vest connection"));
 #endif
@@ -430,7 +435,8 @@ void TaskRegenerateCallback()
   bullets = weapons[myWeaponIndex].getMaxBullets();
   drawbullets(0, bullets);
   Display.sendBuffer();
-  if(boundvest != 0){
+  if (boundvest != 0)
+  {
     Lasermesh.sendSingle(boundvest, "alive");
   }
 }
@@ -521,9 +527,9 @@ void MeshReceivedCallback(uint32_t from, String &msg)
 
   if (msg == SCORE_MESSAGE)
   {
-    #ifdef DEBUG_MODE
-      Serial.println(F("Got a point"));
-    #endif
+#ifdef DEBUG_MODE
+    Serial.println(F("Got a point"));
+#endif
     myPoints++;
     TeamList[myTeamId].score++; // Todo: sync points between players.
     drawbullets(0, bullets);
@@ -531,16 +537,16 @@ void MeshReceivedCallback(uint32_t from, String &msg)
   else if (msg.startsWith("IR-Data:"))
   {
     uint32_t value = strtoul(msg.substring(msg.indexOf(":") + 1).c_str(), nullptr, 10);
-    #ifdef DEBUG_MODE
-      Serial.println(value);
-    #endif
+#ifdef DEBUG_MODE
+    Serial.println(value);
+#endif
     CheckIRresults(MILESTAG2, (value & 0B110000) >> 4, value >> 6, value & 0b001111);
   }
   else if (msg == VEST_CONNECT_ACKNOWLEDGE_MESSAGE)
   {
-    #ifdef DEBUG_MODE
-      Serial.println(F("Connected Vest!"));
-    #endif
+#ifdef DEBUG_MODE
+    Serial.println(F("Connected Vest!"));
+#endif
     boundvest = from;
   }
   else if (msg.startsWith("Sync\n"))
@@ -707,8 +713,9 @@ inline void CheckIRresults(decode_type_t decode_type, uint8_t teamId, uint16_t p
     {
       playAudio(DEATH_SOUND);
       alive = false;
-      if(boundvest != 0){
-        Lasermesh.sendSingle(boundvest,F("dead"));
+      if (boundvest != 0)
+      {
+        Lasermesh.sendSingle(boundvest, F("dead"));
       }
       TaskRegenerate.restartDelayed(Down_Time);
       you_killed_me.push_back(players[playerIndex]);
@@ -767,10 +774,15 @@ void teamselect()
   Serial.println(F("starting teamselection."));
 #endif
 
-  unsigned long seltime = millis() + TEAM_SelTime;
   pixels.fill(TeamList[myTeamId].color, 0, 0); // Fill the entire strip with the Temcolor[0]
   pixels.show();
-  while (seltime > millis())
+
+  Display.clearBuffer();
+  Display.setCursor(0, 40);
+  Display.print(F("Select your\nteam"));
+  Display.sendBuffer();
+  // Aim Button not pressed
+  while (digitalRead(AIM_BUTTON))
   {
     if (digitalRead(SHOOT_BUTTON) == LOW)
     {
@@ -795,26 +807,6 @@ void teamselect()
   Serial.print(F("finished Teamselection, Team:"));
   Serial.println(myTeamId);
 #endif
-}
-
-void Connect_Vest()
-{
-  Display.setCursor(0, 20);
-  Display.print(F("Now connecting vest!"));
-  Display.sendBuffer();
-  uint64_t connect_time = millis() + VEST_CONNECTTIME;
-  while (connect_time > millis())
-  {
-    if (digitalRead(SHOOT_BUTTON) == LOW)
-    {
-
-      Serial.println(F("Sending packet to connect vest"));
-      sendMilesTag(std::distance(players.begin(), std::find(players.begin(), players.end(), Lasermesh.getNodeId())), myTeamId, 15);
-      playAudio(SHOOT_SOUND);
-      delay(100);
-    }
-    Lasermesh.update();
-  }
 }
 
 void drawHP(void)
