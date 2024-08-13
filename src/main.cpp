@@ -31,8 +31,6 @@ LICENSE file in the root directory of this source tree.
 #include "neopixel_config.h"
 #include "team_config.h"
 
-#define DEBUG_MODE
-
 const uint8_t SPEAKER_PIN = RX;
 
 const uint8_t PIXEL_PIN = D7;
@@ -53,6 +51,7 @@ const char *RELOAD_SOUND PROGMEM = "/reload.wav";
 const char *EMPTY_SOUND PROGMEM = "/empty.wav";
 const char *SHOOT_SOUND PROGMEM = "/shoot.wav";
 
+#define DEBUG_MODE             // Enable Debug Serial-prints
 #define TEAM_SelTime 5000      // Time when turning on to select teams
 #define VEST_CONNECTTIME 15000 // time to connect a vest
 
@@ -64,7 +63,7 @@ const char *SHOOT_SOUND PROGMEM = "/shoot.wav";
 
 #define IR_CHECK_INTERVAL 100
 
-#define CHECK_BATTERY // Check the voltage of the battery, comment this out if you've got PCB_v2 since it doesn't have the resistors to meassure the voltage.
+// #define CHECK_BATTERY // Check the voltage of the battery, comment this out if you've got PCB_v2 since it doesn't have the resistors to meassure the voltage.
 
 // #define PISTOL_DAMMAGE 9 // The index of the Dammage array in team_config.h
 // #define MAX_BULLETS 14   // With BULLET_WIDTH 10 and space 30 x 90 and Bullet_WIDTH 10 theres Space for 48 bullets
@@ -234,9 +233,6 @@ void setup()
   Display.sendBuffer();
   delay(1000);
 
-
-
-
   pinMode(AIM_BUTTON, INPUT_PULLUP); // Set pinmode again because ESP8266audio blocks these for I2s which isn't needed. With redeclaration there's no problem.
   pinMode(AIM_LASER, OUTPUT);
   // pinMode(IR_LASER,OUTPUT);
@@ -251,14 +247,6 @@ void setup()
   // transmitter.enableIROut(36, 50);
   receiver.enableIRIn(); // sets the Pin to INPUT automatically
   transmitter.begin();
-
-#ifdef DEBUG_MODE
-  Serial.println(F("Now connecting vest"));
-#endif
-
-#ifdef DEBUG_MODE
-  Serial.println(F("finished Vest connection"));
-#endif
 
   attachInterrupt(digitalPinToInterrupt(AIM_BUTTON), onLaserButtonChange, CHANGE);
 
@@ -293,7 +281,7 @@ void loop()
   // loopAudio();
   // Serial.printf("D4 is %i\n", digitalRead(D4));
 
-  // userScheduler.execute();
+  userScheduler.execute();
 
   Lasermesh.update();
 
@@ -326,8 +314,8 @@ void drawammunition(uint8_t x, uint8_t y)
 void drawbullets(uint8_t first, uint8_t last)
 {
   Display.clearBuffer();
-  printTeamInformation();
 
+  printTeamInformation();
   drawScore();
 
   if (boundvest != 0 && Lasermesh.isConnected(boundvest))
@@ -627,11 +615,12 @@ void IRAM_ATTR onShoot() // Send a Milestag2 Package, Play sounds and start the 
 {
   // Serial.println("Interrupt!");
   // noInterrupts();
+
   if (alive && !TaskShoot.isEnabled())
   {
     // if (!digitalRead(SHOOT_BUTTON))
     // {
-    TaskShoot.restartDelayed(weapons[myWeaponIndex].getTimeBeforeShot());
+    TaskShoot.restart/*Delayed*/(/*weapons[myWeaponIndex].getTimeBeforeShot()*/);
     // }
     // else
     // {
@@ -824,7 +813,7 @@ void drawScore(void)
 
 void TaskShootCallback()
 {
-  noInterrupts();
+  // noInterrupts();
   if (millis() >= debounce_shoot && TaskReload.getRunCounter() < 1)
   {
 
@@ -871,7 +860,7 @@ void TaskShootCallback()
 
     // shootButtonReleased = false;
   }
-  interrupts();
+  // interrupts();
 }
 
 void weaponSelect()

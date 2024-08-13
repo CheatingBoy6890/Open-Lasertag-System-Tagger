@@ -36,8 +36,6 @@ private:
     // Time between the Task can be started again should be 0 for full-auto and the wanted time for burst and semi-auto
     uint32_t time_between_shooting;
 
-    // Time it takes before the weapon shoots if you some kind of charging weapon
-    uint32_t time_before_shoot;
     // The time between automatic shots, important for full and semi auto
     uint32_t shoot_interval;
 
@@ -53,14 +51,13 @@ private:
     uint8_t dammage;
 
 public:
-    weapon(uint8_t *ico, uint8_t w, uint8_t h, int32_t iterations, uint32_t between, uint32_t t_before_shot, uint32_t interval, uint8_t dmg, uint16_t bullets, uint32_t t_before_reload, bool all_at_once, uint32_t t_per_bullet)
+    weapon(uint8_t *ico, uint8_t w, uint8_t h, int32_t iterations, uint32_t between, uint32_t interval, uint8_t dmg, uint16_t bullets, uint32_t t_before_reload, bool all_at_once, uint32_t t_per_bullet)
     {
         icon = ico;
         icon_width = w;
         icon_height = h;
         shot_iterrations = iterations;
         time_between_shooting = between;
-        time_before_shoot = t_before_shot;
         shoot_interval = interval;
         max_bullets = bullets;
         dammage = dmg;
@@ -100,11 +97,6 @@ public:
         return icon_height;
     }
 
-    uint32_t getTimeBeforeShot()
-    {
-        return time_before_shoot;
-    }
-
     void drawIcon(uint8_t x, uint8_t y)
     {
         Display.drawXBMP(x, y, icon_width, icon_height, icon);
@@ -140,9 +132,9 @@ public:
 // static const weapon burst_pistol(pistol_burst_bits, pistol_burst_width, pistol_burst_height, 3, 400, 0, 100, 8, 27, 2000, false, 450);
 #ifdef ENABLE_WEAPONS
 static weapon weapons[]{
-    {pistol_bits, pistol_width, pistol_height, 1 /*burst length*/, 250 /*time between shots*/, 0, 0, /*dmg*/ 12, 12, 1500, false, 600},                   // pistol
-    {maschinegun_bits, maschinegun_width, maschinegun_height, -1 /*burst length*/, 0 /*time between shots*/, 0, 100, /*dmg*/ 7, 48, 5000, false, 300},    // maschinegun
-    {pistol_burst_bits, pistol_burst_width, pistol_burst_height, 3 /*burst length*/, 300 /*time between shots*/, 0, 100, /*dmg*/ 8, 27, 2000, false, 450} // burst_pistol
+    {pistol_bits, pistol_width, pistol_height, 1 /*burst length*/, 250 /*time between shots*/, 0, /*dmg*/ 12, 12, 1500, false, 600},                   // pistol
+    {maschinegun_bits, maschinegun_width, maschinegun_height, -1 /*burst length*/, 0 /*time between shots*/, 100, /*dmg*/ 7, 48, 5000, false, 300},    // maschinegun
+    {pistol_burst_bits, pistol_burst_width, pistol_burst_height, 3 /*burst length*/, 300 /*time between shots*/, 100, /*dmg*/ 8, 27, 2000, false, 450} // burst_pistol
 };
 
 #else
