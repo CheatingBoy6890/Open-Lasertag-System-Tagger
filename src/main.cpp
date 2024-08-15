@@ -540,6 +540,7 @@ void MeshReceivedCallback(uint32_t from, String &msg)
     Serial.println(F("Connected Vest!"));
 #endif
     boundvest = from;
+    Lasermesh.sendSingle(boundvest,F("alive"));
   }
   else if (msg.startsWith("Sync\n"))
   {
