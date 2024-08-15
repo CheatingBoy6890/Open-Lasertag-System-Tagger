@@ -63,7 +63,7 @@ const char *SHOOT_SOUND PROGMEM = "/shoot.wav";
 
 #define IR_CHECK_INTERVAL 100
 
-// #define CHECK_BATTERY // Check the voltage of the battery, comment this out if you've got PCB_v2 since it doesn't have the resistors to meassure the voltage.
+#define CHECK_BATTERY // Check the voltage of the battery, comment this out if you've got PCB_v2 since it doesn't have the resistors to meassure the voltage.
 
 // #define PISTOL_DAMMAGE 9 // The index of the Dammage array in team_config.h
 // #define MAX_BULLETS 14   // With BULLET_WIDTH 10 and space 30 x 90 and Bullet_WIDTH 10 theres Space for 48 bullets
@@ -113,6 +113,7 @@ void drawScore(void);
 void IRRecv();
 
 void onShoot();
+void handleShootInterrupt();
 void sendMilesTag(uint8_t player, uint8_t team, uint8_t dammage);
 void CheckIRresults(decode_type_t decode_type, uint8_t teamId, uint16_t playerIndex, uint8_t damage);
 void IRAM_ATTR onLaserButtonChange();
@@ -133,6 +134,7 @@ Task TaskSendScorePoints(SEND_POINT_INTERVAL, TASK_FOREVER, &send_who_killed_me)
 Task TaskSyncPoints(10000, TASK_FOREVER, &updateScores);
 Task TaskCheckIR(IR_CHECK_INTERVAL, TASK_FOREVER, &IRRecv);
 Task TaskShoot(100, TASK_FOREVER, &TaskShootCallback);
+Task TaskHandleShootInterrupt(10, TASK_FOREVER, &handleShootInterrupt);
 
 uint8_t bullets = weapons[myWeaponIndex].getMaxBullets();
 
@@ -144,7 +146,7 @@ uint8_t hp = 100;
 bool alive = true;
 bool isRunning = false;
 bool enableAimLaser = true; // Todo: Maybe it's possible to debuff the other team so they cant use their lasers. Just a thought.
-volatile bool shootButtonReleased = false;
+volatile bool shootButtonpressed = false;
 /*
   ____       _
  / ___|  ___| |_ _   _ _ __
@@ -222,7 +224,8 @@ void setup()
   userScheduler.addTask(TaskLoopAudio);
   userScheduler.addTask(TaskShoot);
   userScheduler.addTask(TaskSyncPoints);
-  // TaskSendScorePoints.enable();
+  userScheduler.addTask(TaskHandleShootInterrupt);
+  TaskSendScorePoints.enable();
 
   teamselect();
 
@@ -251,6 +254,7 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(AIM_BUTTON), onLaserButtonChange, CHANGE);
 
   attachInterrupt(digitalPinToInterrupt(SHOOT_BUTTON), onShoot, FALLING);
+  TaskHandleShootInterrupt.enable();
 
   drawbullets(0, bullets);
   // drawHP();
@@ -281,7 +285,7 @@ void loop()
   // loopAudio();
   // Serial.printf("D4 is %i\n", digitalRead(D4));
 
-  userScheduler.execute();
+  // userScheduler.execute();
 
   Lasermesh.update();
 
@@ -613,14 +617,22 @@ void IRAM_ATTR onLaserButtonChange()
 
 void IRAM_ATTR onShoot() // Send a Milestag2 Package, Play sounds and start the ReloadTask for later. Reload task is disabled when the Button is releasded before TIME_BEFORE_RELOAD
 {
+
+  shootButtonpressed = true;
   // Serial.println("Interrupt!");
   // noInterrupts();
 
-  if (alive && !TaskShoot.isEnabled())
+  // interrupts();
+}
+
+void handleShootInterrupt()
+{
+  if (shootButtonpressed && alive && !TaskShoot.isEnabled())
   {
     // if (!digitalRead(SHOOT_BUTTON))
     // {
-    TaskShoot.restart/*Delayed*/(/*weapons[myWeaponIndex].getTimeBeforeShot()*/);
+    TaskShoot.restart /*Delayed*/ (/*weapons[myWeaponIndex].getTimeBeforeShot()*/);
+    shootButtonpressed = false;
     // }
     // else
     // {
@@ -630,7 +642,6 @@ void IRAM_ATTR onShoot() // Send a Milestag2 Package, Play sounds and start the 
 
     //     // Serial.println("Disabled Reloading because of Button release!");
     //   }
-    //   shootButtonReleased = true;
     //   // Serial.println("Shoot button released");
     //   if (TaskShoot.getIterations() <= 0)
     //   {
@@ -638,7 +649,6 @@ void IRAM_ATTR onShoot() // Send a Milestag2 Package, Play sounds and start the 
     //   }
     // }
   }
-  // interrupts();
 }
 
 void sendMilesTag(uint8_t playerIndex, uint8_t team, uint8_t dammage)
@@ -857,8 +867,6 @@ void TaskShootCallback()
     {
       TaskShoot.disable();
     }
-
-    // shootButtonReleased = false;
   }
   // interrupts();
 }
