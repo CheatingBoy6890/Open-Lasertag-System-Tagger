@@ -1,3 +1,10 @@
+<div align="center">
+  
+[![PCBWay](https://github.com/user-attachments/assets/d836a4a7-516c-4f2f-8547-6fc7cfca758b)](www.pcbway.com)
+###### Partnering with PCBway.
+</div>
+<br/>
+
 # Hardware
 
 ## General Information
@@ -30,8 +37,14 @@ The schematic for using a breadboard is in the .diy format. These files can be v
 
 ## PCB
 
-We created the pcb layout with <a href="https://www.kicad.org/">KiCad</a>. Some Online PCB services like Aisler allow just uploading the .kicad_pcb file for other you will have to export the pcb as gerber file to do this you can follow this tutorial: <a>https://jlcpcb.com/help/article/362-how-to-generate-gerber-and-drill-files-in-kicad-7</a>
+We created the pcb layout with <a href="https://www.kicad.org/">KiCad</a>. You can easily order really nice high-quality PCBs from our partner [PCBWay](www.pcbway.com) by using the PCBWay plugin in KiCAD following this [turorial](https://www.pcbway.com/blog/News/PCBWay_Plug_In_for_KiCad_3ea6219c.html), exporting the gerber files manually like explained [here](https://www.pcbway.com/blog/help_center/How_to_Generate_Gerber_and_Drill_Files_in_KiCad_7_0_ab0d12bb.html) or use the files in the repository (possibly outdated or not-yet available).
 
+
+<img src="https://github.com/user-attachments/assets/2d0a36ec-5314-4bf2-8cd0-de0de4358181" width=300/> <img src="https://github.com/user-attachments/assets/41335f11-8d60-466a-965a-b0f244fbd1c7" width=300 />
+<div align=center>
+   
+###### Pictures from [Lasertag's Grenade](https://github.com/CheatingBoy6890/Open-Lasertag-System-Grenade) PCB
+</div>
 ---
 
 ## The Displays
