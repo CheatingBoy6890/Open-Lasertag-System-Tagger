@@ -10,7 +10,8 @@ LICENSE file in the root directory of this source tree.
 
 #include <U8g2lib.h>
 
-#include "AudioFileSourceSPIFFS.h"
+// #include "AudioFileSourceSPIFFS.h"
+#include "AudioFileSourceLittleFS.h"
 // #include "AudioGeneratorMP3.h"
 // #include "AudioGeneratorFLAC.h"
 #include <AudioGeneratorWAV.h>
@@ -77,7 +78,7 @@ decode_results results;
 
 IRsend transmitter(IR_LASER);
 
-AudioFileSourceSPIFFS *file;
+AudioFileSourceLittleFS *file;
 // AudioGeneratorMP3a *decoder;
 AudioGeneratorWAV *decoder;
 AudioOutputI2SNoDAC *out;
@@ -178,7 +179,8 @@ void setup()
   Display.setFont(u8g2_font_tinytim_tf);
   Display.setDrawColor(1);
   Display.setBitmapMode(1);
-  SPIFFS.begin();
+  // SPIFFS.begin();
+  LittleFS.begin();
   pixels.begin();
 
   weaponSelect();
@@ -193,7 +195,7 @@ void setup()
 
   audioLogger = &Serial;
 
-  file = new AudioFileSourceSPIFFS(DEATH_SOUND);
+  file = new AudioFileSourceLittleFS(DEATH_SOUND);
   decoder = new AudioGeneratorWAV();
   decoder->SetBufferSize(500);
   out = new AudioOutputI2SNoDAC();
@@ -263,10 +265,10 @@ void setup()
 
   alive = true;
   TaskRegenerate.enable();
-  TaskCheckIR.enable();
+
   updatePixels();
   TaskLoopAudio.enable();
-  TaskSyncPoints.enable();
+  
   playAudio(DEATH_SOUND);
 }
 
@@ -540,7 +542,7 @@ void MeshReceivedCallback(uint32_t from, String &msg)
     Serial.println(F("Connected Vest!"));
 #endif
     boundvest = from;
-    Lasermesh.sendSingle(boundvest,F("alive"));
+    Lasermesh.sendSingle(boundvest, F("alive"));
   }
   else if (msg.startsWith("Sync\n"))
   {
@@ -949,4 +951,10 @@ void mesassure_battery()
     playAudio(DEATH_SOUND);
     // delay(1000); // You actually should never use delay in a Task but I was to lazy to search a good way to pause anything printing to the display for one second.
   }
+}
+
+
+void startGame(){
+  TaskCheckIR.enable();
+  TaskSyncPoints.enable();
 }

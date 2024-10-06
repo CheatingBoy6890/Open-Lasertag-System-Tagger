@@ -11,7 +11,8 @@ Warning: This project uses lasers. Be sure to **always** do your own testing by 
 
 ---
 
-<h2>What is Open-Lasertag-System?</h2>
+## What is Open-Lasertag-System?
+
 Open-Lasertag-System is our approach to a build Lasertag that can be played anywhere without the need of setting up repeaters or servers, whilst beeing pretty easy to build and extend to fit your needs. It works decentral using a WIFI mesh,so the range and fun extends the more players you have!
 
 Currently the project consists of five parts:
@@ -24,11 +25,11 @@ Currently the project consists of five parts:
 
 ---
 
-<h2>What is this repository?</h2>
+## What is this repository?
 
 This is the repository for the taggers of the system. here you'll find all the neccessary files on how to build a tagger your self.
 
-**The instructions on building can be found in the <a href="https://github.com/CheatingBoy6890/Open-Lasertag-System-Tagger/tree/main/Hardware">Hardware folder</a>**
+**The instructions on building can be found in the** [**Hardware folder**](https://github.com/CheatingBoy6890/Open-Lasertag-System-Tagger/tree/main/Hardware)
 
 **You can also buy prepackaged set on ebay: https://www.ebay.de/itm/226291836696 (only available in Germany)**
 
